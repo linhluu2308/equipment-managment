@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/equipment", label: "Thiết bị", icon: "🎥" },
   { href: "/calendar", label: "Calendar", icon: "📅" },
   { href: "/reports", label: "Báo cáo", icon: "📈", chuOnly: true },
+  { href: "/members", label: "Thành viên", icon: "👤", chuOnly: true },
 ];
 
 function isActive(pathname: string, href: string) {

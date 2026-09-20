@@ -19,6 +19,7 @@ const PAGE_META: { match: (p: string) => boolean; breadcrumb: string; title: str
   { match: (p) => p === "/equipment", breadcrumb: "Thiết bị", title: "Danh mục tài sản & lợi nhuận" },
   { match: (p) => p === "/calendar", breadcrumb: "Calendar", title: "Lịch kế hoạch cho thuê" },
   { match: (p) => p === "/reports", breadcrumb: "Báo cáo", title: "Lợi nhuận & hiệu suất cho thuê" },
+  { match: (p) => p === "/members", breadcrumb: "Thành viên", title: "Quản lý tài khoản đăng nhập" },
 ];
 
 export default function Header() {
