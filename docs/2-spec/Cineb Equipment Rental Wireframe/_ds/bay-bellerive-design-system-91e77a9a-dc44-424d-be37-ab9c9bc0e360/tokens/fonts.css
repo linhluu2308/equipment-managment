@@ -1,0 +1,7 @@
+/* Bay Bellerive webfonts.
+   SUBSTITUTION NOTE: no font binaries were supplied with the brand assets.
+   The wordmark is a geometric sans in the Futura / Avenir lineage; Jost is the
+   closest freely-licensed match and is used for all display + UI type.
+   EB Garamond carries long-form editorial copy. Replace with licensed files if
+   the venue owns Futura PT / Avenir Next. */
+@import url("https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap");

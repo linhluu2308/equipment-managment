@@ -1,0 +1,11 @@
+:root{
+/* Paper, not glass: shadows are warm, low and wide. */
+--shadow-none:none;
+--shadow-card:0 1px 2px color-mix(in oklab, var(--ink-900) 6%, transparent),0 8px 24px -12px color-mix(in oklab, var(--ink-900) 18%, transparent);
+--shadow-raised:0 2px 4px color-mix(in oklab, var(--ink-900) 7%, transparent),0 18px 40px -18px color-mix(in oklab, var(--ink-900) 26%, transparent);
+--shadow-overlay:0 32px 70px -24px color-mix(in oklab, var(--ink-900) 40%, transparent);
+--shadow-inset-hairline:inset 0 0 0 1px var(--line-hairline);
+--scrim-image:linear-gradient(to top, color-mix(in oklab, var(--ink-900) 74%, transparent) 0%, color-mix(in oklab, var(--ink-900) 26%, transparent) 46%, transparent 78%);
+--scrim-flat:color-mix(in oklab, var(--ink-900) 42%, transparent);
+--blur-overlay:blur(10px) saturate(120%); /* @kind other */
+}

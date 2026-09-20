@@ -1,0 +1,41 @@
+:root{
+--font-display:"Jost","Futura","Avenir Next",system-ui,sans-serif;
+--font-ui:"Jost","Avenir Next",system-ui,sans-serif;
+--font-editorial:"EB Garamond",Georgia,serif;
+
+--weight-light:300;
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+
+/* Display — wordmark-adjacent, always lowercase */
+--size-display-xl:clamp(3.5rem,9vw,7.5rem);
+--size-display-l:clamp(2.75rem,6vw,4.5rem);
+--size-display-m:2.25rem;
+
+/* Headings */
+--size-h1:2rem;
+--size-h2:1.5rem;
+--size-h3:1.1875rem;
+
+/* Body */
+--size-body-l:1.125rem;
+--size-body:1rem;
+--size-body-s:0.9375rem;
+--size-caption:0.8125rem;
+
+/* Eyebrow / label — tracked-out uppercase */
+--size-eyebrow:0.6875rem;
+
+--leading-tight:0.94;
+--leading-snug:1.14;
+--leading-normal:1.5;
+--leading-loose:1.65;
+
+--tracking-display:-0.022em;
+--tracking-normal:0;
+--tracking-wide:0.06em;
+--tracking-eyebrow:0.22em;
+
+--text-eyebrow-transform:uppercase;
+}

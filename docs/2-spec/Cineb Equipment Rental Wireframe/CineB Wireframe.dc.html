@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/tokens/fonts.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap">
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/tokens/elevation.css">
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/styles.css">
+  <script src="_ds/bay-bellerive-design-system-91e77a9a-dc44-424d-be37-ab9c9bc0e360/_ds_bundle.js"></script>
+  <style>
+    :root{
+      --surface-page:#f2fbfd;
+      --surface-card:#ffffff;
+      --surface-sunken:#caf0f8;
+      --line-strong:#0077b6;
+      --line-hairline:rgba(3,4,94,.18);
+      --text-heading:#03045e;
+      --text-body:#023e73;
+      --text-muted:#0077b6;
+      --text-quiet:#90e0ef;
+      --text-accent:#00b4d8;
+      --action-primary:#03045e;
+      --action-primary-hover:#0077b6;
+      --action-on-primary:#ffffff;
+      --status-info:#00b4d8;
+      --brand-secondary:#ffffff;
+    }
+    body{margin:0;background:var(--surface-page);font-family:Arial,sans-serif}
+    .wf-box{background:var(--surface-card);border:1.5px dashed var(--line-strong);border-radius:2px;padding:12px}
+    .wf-label{font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.18em;color:var(--text-muted);margin:0 0 8px 0;font-family:'Times New Roman',serif}
+    .wf-row{display:flex;gap:1px;background:var(--line-hairline)}
+    .wf-cell{flex:1;background:var(--surface-card);padding:8px 10px;font:400 12px Arial,sans-serif;color:var(--text-body)}
+    .wf-cell.hd{font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);background:var(--surface-sunken)}
+  </style>
+</helmet>
+
+<div style="max-width:1440px;margin:0 auto;padding:32px 40px 80px;display:flex;flex-direction:column;gap:16px">
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.22em;color:var(--text-accent)">wireframe · cấu trúc layout</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+        <img src="assets/cineb-logo.png" alt="CineB Film Equipment" style="height:34px;width:auto">
+        <h1 style="margin:0;font:700 32px 'Times New Roman',serif;color:var(--text-heading)">· Quản lý cho thuê thiết bị</h1>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <sc-for list="{{ screens }}" as="s" hint-placeholder-count="4">
+        <button onClick="{{ s.select }}" style="border:1.5px solid var(--line-strong);background:{{ s.bg }};color:{{ s.fg }};font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.12em;padding:10px 16px;border-radius:2px;cursor:pointer">{{ s.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- MÀN 1: DASHBOARD -->
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="wf-box" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="wf-label" style="margin:0">header · ngày giờ · người đăng nhập</div>
+        <div style="font:400 12px Arial,sans-serif;color:var(--text-muted)">Thứ Ba, 01/09/2026 · Nguyễn A (Chủ)</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div class="wf-box">
+            <div class="wf-label">{{ k.label }}</div><div style="font:500 30px Arial,sans-serif;color:var(--text-heading)">{{ k.value }}</div>
+            
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.25fr 0.75fr;gap:16px">
+        <div class="wf-box">
+          <div class="wf-label">khối 1 · đơn thuê trong ngày</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <sc-for list="{{ dashTabs }}" as="t" hint-placeholder-count="3">
+              <div style="font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;padding:6px 10px;border-bottom:1.5px solid {{ t.active }};color:{{ t.color }}">{{ t.label }}</div>
+            </sc-for>
+          </div>
+          <div class="wf-row"><div class="wf-cell hd">Mã đơn</div><div class="wf-cell hd">Khách hàng</div><div class="wf-cell hd">SL máy</div><div class="wf-cell hd">Thời gian</div><div class="wf-cell hd">Cọc</div></div>
+          <sc-for list="{{ dashOrders }}" as="o" hint-placeholder-count="4">
+            <div class="wf-row"><div class="wf-cell">{{ o.id }}</div><div class="wf-cell">{{ o.customer }}</div><div class="wf-cell">{{ o.qty }}</div><div class="wf-cell">{{ o.time }}</div><div class="wf-cell">{{ o.deposit }}</div></div>
+          </sc-for>
+        </div>
+
+        <div class="wf-box">
+          <div class="wf-label">khối 2 · tồn kho nhanh theo loại</div>
+          <div class="wf-row"><div class="wf-cell hd">Loại</div><div class="wf-cell hd">Tổng</div><div class="wf-cell hd">Đang thuê</div><div class="wf-cell hd">Còn trống</div></div>
+          <sc-for list="{{ inventory }}" as="i" hint-placeholder-count="4">
+            <div class="wf-row"><div class="wf-cell">{{ i.cat }}</div><div class="wf-cell">{{ i.total }}</div><div class="wf-cell">{{ i.rented }}</div><div class="wf-cell" style="color:var(--status-open);font-weight:500">{{ i.free }}</div></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- MÀN 2: ORDERS -->
+  <sc-if value="{{ isOrders }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="wf-box" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="border:1px solid var(--line-strong);border-radius:2px;padding:8px 12px;font:400 12px Arial,sans-serif;color:var(--text-muted)">🔍 tên khách · SĐT · mã đơn</div>
+          <sc-for list="{{ orderPills }}" as="p" hint-placeholder-count="7">
+            <div style="border-radius:999px;padding:6px 12px;font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;background:{{ p.bg }};color:{{ p.fg }}">{{ p.label }}</div>
+          </sc-for>
+        </div>
+        <div style="background:var(--action-primary);color:var(--action-on-primary);font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;padding:10px 16px;border-radius:2px;cursor:pointer">+ tạo đơn mới</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">danh sách đơn</div>
+        <div class="wf-row"><div class="wf-cell hd">Mã đơn</div><div class="wf-cell hd">Ngày tạo</div><div class="wf-cell hd">Khách hàng</div><div class="wf-cell hd">Dải ngày thuê</div><div class="wf-cell hd">Cọc giấy tờ / Tiền</div><div class="wf-cell hd">Tổng tiền</div><div class="wf-cell hd">Đã thu</div><div class="wf-cell hd">Công nợ</div><div class="wf-cell hd">Trạng thái</div></div>
+        <sc-for list="{{ ordersList }}" as="o" hint-placeholder-count="4">
+          <div class="wf-row"><div class="wf-cell">{{ o.id }}</div><div class="wf-cell">{{ o.created }}</div><div class="wf-cell">{{ o.customer }}</div><div class="wf-cell">{{ o.range }}</div><div class="wf-cell">{{ o.docDeposit }}</div><div class="wf-cell">{{ o.total }}</div><div class="wf-cell">{{ o.paid }}</div><div class="wf-cell" style="color:{{ o.debtColor }}">{{ o.debt }}</div><div class="wf-cell">{{ o.stage }}</div></div>
+        </sc-for>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">chi tiết đơn (/orders/:id) · progress chặng</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <sc-for list="{{ stages }}" as="st" hint-placeholder-count="5">
+            <div style="flex:1;text-align:center;font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.08em;padding:8px 4px;background:{{ st.bg }};color:{{ st.fg }};border-radius:2px">{{ st.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="wf-box" style="border-style:solid">
+            <div class="wf-label">khách hàng &amp; ngày thuê</div>
+            <div style="font:400 13px Arial,sans-serif;color:var(--text-body)">Tên · SĐT · Người giới thiệu<br><strong>Thuê: 01/09 → 05/09 (5 ngày)</strong></div>
+          </div>
+          <div class="wf-box" style="border-style:solid">
+            <div class="wf-label">danh sách thiết bị</div>
+            <div style="font:400 13px Arial,sans-serif;color:var(--text-body)">Tên máy · serial · ngày thuê · đơn giá · chiết khấu · thành tiền</div>
+          </div>
+          <div class="wf-box" style="border-style:solid">
+            <div class="wf-label">tài chính, cọc tiền &amp; cọc giấy tờ</div>
+            <div style="font:400 13px Arial,sans-serif;color:var(--text-body)">Tổng tiền · Lịch sử thanh toán · <strong>🪪 Giữ CCCD (079...)</strong> · Chi phí phát sinh · <span style="color:var(--status-closed);font-weight:500">Công nợ còn lại</span></div>
+          </div>
+          <div class="wf-box" style="border-style:solid">
+            <div class="wf-label">biên bản kiểm tra &amp; trả đồ</div>
+            <div style="font:400 13px Arial,sans-serif;color:var(--text-body)">Checklist thiết bị (tốt/hỏng) · [Xác nhận trả lại CCCD cho khách]</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <sc-for list="{{ footerActions }}" as="a" hint-placeholder-count="3">
+            <div style="border:1.5px solid var(--line-strong);border-radius:2px;padding:8px 14px;font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-body)">{{ a }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- MÀN 3: EQUIPMENT -->
+  <sc-if value="{{ isEquipment }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="wf-box" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="border:1px solid var(--line-strong);border-radius:2px;padding:8px 12px;font:400 12px Arial,sans-serif;color:var(--text-muted)">🔍 tên/mã thiết bị</div>
+          <sc-for list="{{ equipFilters }}" as="f" hint-placeholder-count="3">
+            <div style="border:1px solid var(--line-strong);border-radius:2px;padding:8px 12px;font:400 11px Arial,sans-serif;color:var(--text-muted)">{{ f }} ▾</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="border:1.5px solid var(--line-strong);background:var(--surface-card);color:var(--text-body);font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;padding:10px 14px;border-radius:2px;cursor:pointer">📥 Import Excel</div>
+          <div style="background:var(--action-primary);color:var(--action-on-primary);font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;padding:10px 16px;border-radius:2px;cursor:pointer">+ thêm thiết bị (chỉ chủ)</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">danh mục thiết bị</div>
+        <div class="wf-row"><div class="wf-cell hd">Ảnh</div><div class="wf-cell hd">Mã</div><div class="wf-cell hd">Tên</div><div class="wf-cell hd">Danh mục</div><div class="wf-cell hd">Giá/ngày</div><div class="wf-cell hd">Nguồn gốc</div><div class="wf-cell hd">Trạng thái</div><div class="wf-cell hd">Doanh thu</div></div>
+        <sc-for list="{{ equipList }}" as="e" hint-placeholder-count="4">
+          <div class="wf-row"><div class="wf-cell" style="color:var(--text-quiet)">▢</div><div class="wf-cell">{{ e.code }}</div><div class="wf-cell">{{ e.name }}</div><div class="wf-cell">{{ e.cat }}</div><div class="wf-cell">{{ e.price }}</div><div class="wf-cell">{{ e.source }}</div><div class="wf-cell">{{ e.status }}</div><div class="wf-cell">{{ e.revenue }}</div></div>
+        </sc-for>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">hồ sơ chi tiết thiết bị (/equipment/:id) · tabs</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <sc-for list="{{ equipTabs }}" as="t" hint-placeholder-count="4">
+            <div style="font:500 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.08em;padding:8px 12px;border-bottom:1.5px solid {{ t.active }};color:{{ t.color }}">{{ t.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div class="wf-box" style="border-style:solid"><div class="wf-label">doanh thu đã tạo ra</div><div style="font:500 24px Arial,sans-serif;color:var(--text-heading)">42.500k</div></div>
+          <div class="wf-box" style="border-style:solid"><div class="wf-label">chi phí vốn + bảo trì</div><div style="font:500 24px Arial,sans-serif;color:var(--text-heading)">8.100k</div></div>
+          <div class="wf-box" style="border-style:solid"><div class="wf-label">lợi nhuận ròng lũy kế</div><div style="font:500 24px Arial,sans-serif;color:var(--status-open)">34.400k</div></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- MÀN 4: CALENDAR -->
+  <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="wf-box" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;font:500 12px Arial,sans-serif;color:var(--text-body)">
+          <span>‹</span><span style="text-transform:uppercase;letter-spacing:0.1em">tháng 9, 2026</span><span>›</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <sc-for list="{{ calViews }}" as="v" hint-placeholder-count="3">
+            <div style="border:1px solid var(--line-strong);border-radius:2px;padding:6px 12px;font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.08em;color:{{ v.color }};background:{{ v.bg }}">{{ v.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:14px">
+          <sc-for list="{{ calLegend }}" as="l" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:6px;font:400 11px Arial,sans-serif;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:999px;background:{{ l.color }};display:inline-block"></span>{{ l.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">lưới lịch tháng</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line-hairline)">
+          <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+            <div style="background:var(--surface-sunken);padding:6px;text-align:center;font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted)">{{ w }}</div>
+          </sc-for>
+          <sc-for list="{{ calCells }}" as="c" hint-placeholder-count="35">
+            <div style="background:var(--surface-card);min-height:64px;padding:4px;font:400 10px Arial,sans-serif;color:var(--text-quiet);display:flex;flex-direction:column;gap:2px">
+              <span>{{ c.day }}</span>
+              <sc-if value="{{ c.hasBar }}" hint-placeholder-val="{{ false }}">
+                <div style="background:{{ c.barColor }};color:var(--brand-secondary);font:500 9px Arial,sans-serif;padding:2px 4px;border-radius:2px;overflow:hidden;white-space:nowrap">{{ c.barLabel }}</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="wf-box" style="max-width:340px">
+        <div class="wf-label">popover xem nhanh</div>
+        <div style="font:400 13px Arial,sans-serif;color:var(--text-body);display:flex;flex-direction:column;gap:6px">
+          <div>Tên khách &amp; SĐT</div>
+          <div>Danh sách thiết bị trong đơn</div>
+          <div>Trạng thái thanh toán / cọc</div>
+          <div style="background:var(--action-primary);color:var(--action-on-primary);text-align:center;padding:8px;border-radius:2px;font:500 10px Arial,sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">xem chi tiết đơn →</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: 'dashboard' };
+
+  select(s) { this.setState({ screen: s }); }
+
+  renderVals() {
+    const cur = this.state.screen;
+    const screenDefs = [
+      { key: 'dashboard', label: 'Tổng quan' },
+      { key: 'orders', label: 'Đơn thuê' },
+      { key: 'equipment', label: 'Thiết bị' },
+      { key: 'calendar', label: 'Calendar' },
+    ];
+    const screens = screenDefs.map(s => ({
+      label: s.label,
+      select: () => this.select(s.key),
+      bg: cur === s.key ? 'var(--action-primary)' : 'var(--surface-card)',
+      fg: cur === s.key ? 'var(--action-on-primary)' : 'var(--text-body)',
+    }));
+
+    const kpis = [
+      { label: 'Đơn Thuê đang chạy \n\n\n\n', value: '6' },
+      { label: 'Cần bàn giao hôm nay', value: '2' },
+      { label: 'Đơn thuê dự kiến', value: '3' },
+      { label: 'Thiết bị sẵn sàng', value: '48' },
+    ];
+    const dashTabs = [
+      { label: 'Giao hôm nay', active: 'var(--text-accent)', color: 'var(--text-heading)' },
+      { label: 'Trả hôm nay', active: 'transparent', color: 'var(--text-muted)' },
+      { label: 'Sắp tới (3-7 ngày)', active: 'transparent', color: 'var(--text-muted)' },
+    ];
+    const dashOrders = [
+      { id: 'DH-0231', customer: 'Lê Minh (Vinatuan Films)', qty: '5', time: '09:00', deposit: 'Đã cọc' },
+      { id: 'DH-0233', customer: 'Studio Ánh Sáng', qty: '3', time: '14:00', deposit: 'Đã cọc' },
+      { id: 'DH-0229', customer: 'Trần Hải', qty: '2', time: '10:30', deposit: 'Chưa cọc' },
+      { id: 'DH-0235', customer: 'Ngọc Anh Production', qty: '7', time: '16:00', deposit: 'Đã cọc' },
+    ];
+    const inventory = [
+      { cat: 'Body máy quay', total: '12', rented: '8', free: '4' },
+      { cat: 'Ống kính (Lens)', total: '20', rented: '13', free: '7' },
+      { cat: 'Đèn & Ánh sáng', total: '16', rented: '9', free: '7' },
+      { cat: 'Grip & Phụ kiện', total: '30', rented: '18', free: '12' },
+    ];
+
+    const orderPillDefs = ['Tất cả', 'Yêu cầu', 'Báo giá', 'Đã giao', 'Chờ trả', 'Xong', 'Đã huỷ'];
+    const orderPills = orderPillDefs.map((label, i) => ({
+      label,
+      bg: i === 0 ? 'var(--action-primary)' : 'var(--surface-sunken)',
+      fg: i === 0 ? 'var(--action-on-primary)' : 'var(--text-muted)',
+    }));
+    const ordersList = [
+      { id: 'DH-0231', created: '28/08', customer: 'Lê Minh', range: '01/09 → 05/09 (5 ngày)', docDeposit: '🪪 Giữ CCCD', total: '12.500k', paid: '6.000k', debt: '6.500k', debtColor: 'var(--status-closed)', stage: 'Đã giao' },
+      { id: 'DH-0230', created: '27/08', customer: 'Studio Ánh Sáng', range: '30/08 → 02/09 (3 ngày)', docDeposit: '✓ Đã trả CCCD', total: '8.200k', paid: '8.200k', debt: '0', debtColor: 'var(--status-open)', stage: 'Xong' },
+      { id: 'DH-0233', created: '30/08', customer: 'Trần Hải', range: '02/09 → 04/09 (2 ngày)', docDeposit: 'Chưa cọc', total: '4.100k', paid: '0', debt: '4.100k', debtColor: 'var(--status-closed)', stage: 'Báo giá' },
+      { id: 'DH-0235', created: '31/08', customer: 'Ngọc Anh Production', range: '03/09 → 09/09 (7 ngày)', docDeposit: '🚗 Giữ Bằng lái', total: '21.000k', paid: '10.000k', debt: '11.000k', debtColor: 'var(--status-closed)', stage: 'Đã giao' },
+    ];
+    const stageDefs = ['Yêu cầu', 'Báo giá', 'Đã giao', 'Chờ trả', 'Xong'];
+    const stages = stageDefs.map((label, i) => ({
+      label,
+      bg: i === 2 ? 'var(--action-primary)' : 'var(--surface-sunken)',
+      fg: i === 2 ? 'var(--action-on-primary)' : 'var(--text-muted)',
+    }));
+    const footerActions = ['Nhận thiết bị về kho', 'Ghi nhận thanh toán nốt', 'Chốt công nợ & hoàn tất'];
+
+    const equipFilters = ['Danh mục', 'Trạng thái', 'Nguồn gốc'];
+    const equipList = [
+      { code: 'CAM-014', name: 'Sony FX6', cat: 'Body máy quay', price: '3.500k', source: 'Tự sở hữu', status: 'Đang thuê', revenue: '182.000k' },
+      { code: 'LEN-022', name: 'Sigma 24-70 f2.8', cat: 'Lens', price: '800k', source: 'Tự sở hữu', status: 'Sẵn sàng', revenue: '64.500k' },
+      { code: 'LGT-005', name: 'Aputure 600D', cat: 'Đèn & Ánh sáng', price: '1.200k', source: 'Thuê ngoài', status: 'Bảo trì', revenue: '41.200k' },
+      { code: 'GRP-011', name: 'Slider 120cm', cat: 'Grip & Phụ kiện', price: '450k', source: 'Tự sở hữu', status: 'Sẵn sàng', revenue: '22.800k' },
+    ];
+    const equipTabDefs = ['Thông tin & Giá', 'Lịch sử cho thuê', 'Bảo trì & Kiểm tra', 'Hiệu quả sinh lời'];
+    const equipTabs = equipTabDefs.map((label, i) => ({
+      label,
+      active: i === 3 ? 'var(--text-accent)' : 'transparent',
+      color: i === 3 ? 'var(--text-heading)' : 'var(--text-muted)',
+    }));
+
+    const calViewDefs = ['Theo Tháng', 'Theo Tuần', 'Timeline Gantt'];
+    const calViews = calViewDefs.map((label, i) => ({
+      label,
+      bg: i === 0 ? 'var(--action-primary)' : 'var(--surface-card)',
+      color: i === 0 ? 'var(--action-on-primary)' : 'var(--text-muted)',
+    }));
+    const calLegend = [
+      { label: 'Đã xong', color: 'var(--ink-300)' },
+      { label: 'Chờ chốt', color: 'var(--ember-500)' },
+      { label: 'Đã chốt chờ giao', color: 'var(--status-open)' },
+      { label: 'Đang chạy', color: 'var(--status-info)' },
+    ];
+    const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const bars = {
+      3: { color: 'var(--status-open)', label: 'Lê Minh · 5 máy' },
+      4: { color: 'var(--status-open)', label: 'Lê Minh · 5 máy' },
+      5: { color: 'var(--status-open)', label: 'Lê Minh · 5 máy' },
+      9: { color: 'var(--status-info)', label: 'Studio AS · 3 máy' },
+      10: { color: 'var(--status-info)', label: 'Studio AS · 3 máy' },
+      15: { color: 'var(--ember-500)', label: 'Trần Hải · báo giá' },
+      21: { color: 'var(--ink-300)', label: 'Ngọc Anh · xong' },
+      22: { color: 'var(--ink-300)', label: 'Ngọc Anh · xong' },
+    };
+    const calCells = Array.from({ length: 35 }, (_, i) => {
+      const day = i - 1;
+      const bar = bars[day];
+      return {
+        day: day > 0 && day <= 30 ? day : '',
+        hasBar: !!bar,
+        barColor: bar ? bar.color : '',
+        barLabel: bar ? bar.label : '',
+      };
+    });
+
+    return {
+      screens,
+      isDashboard: cur === 'dashboard',
+      isOrders: cur === 'orders',
+      isEquipment: cur === 'equipment',
+      isCalendar: cur === 'calendar',
+      kpis, dashTabs, dashOrders, inventory,
+      orderPills, ordersList, stages, footerActions,
+      equipFilters, equipList, equipTabs,
+      calViews, calLegend, weekdays, calCells,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

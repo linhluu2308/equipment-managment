@@ -1,0 +1,76 @@
+:root{
+/* --- Base ramp: paper -------------------------------------------------- */
+--cream-050:#fffdf8;
+--cream-100:#fdf5e6; /* brand cream — the wordmark colour */
+--cream-200:#f6ecd8;
+--cream-300:#ece0c8;
+--sand-400:#d9c7a3;
+--sand-500:#c0ab86;
+
+/* --- Base ramp: ink ---------------------------------------------------- */
+--ink-900:#16130f;
+--ink-800:#241f18;
+--ink-700:#3a332a;
+--ink-500:#6b6154;
+--ink-400:#8d8477;
+--ink-300:#b3aa9c;
+
+/* --- Base ramp: water (the Derwent) ----------------------------------- */
+--kelp-900:#0c2f30;
+--kelp-800:#0f3b3c;
+--kelp-600:#1d5b59;
+--tide-500:#2f6f6b;
+--tide-300:#7aa6a0;
+--tide-100:#cfe0dc;
+
+/* --- Brand pair (supplied) -------------------------------------------- */
+--cocoa-900:#2c1b18;
+--cocoa-800:#3e2723; /* brand primary — dark backgrounds */
+--cocoa-700:#513631;
+--cocoa-600:#6b4a43;
+--brand-primary:var(--cocoa-800);
+--brand-secondary:var(--cream-100); /* #fdf5e6 — text on primary */
+
+/* --- Base ramp: ember (sunset over kunanyi) --------------------------- */
+--ember-600:#a8461f;
+--ember-500:#c25a2a;
+--ember-300:#e39a6b;
+--ember-100:#f6ddc9;
+
+/* --- Semantic surfaces ------------------------------------------------ */
+--surface-page:var(--cream-100);
+--surface-raised:var(--cream-050);
+--surface-sunken:var(--cream-200);
+--surface-card:var(--cream-050);
+--surface-inverse:var(--brand-primary);
+--surface-ink:var(--cocoa-900);
+--surface-accent:var(--ember-100);
+
+/* --- Semantic text ---------------------------------------------------- */
+--text-body:var(--ink-800);
+--text-heading:var(--ink-900);
+--text-muted:var(--ink-500);
+--text-quiet:var(--ink-400);
+--text-on-inverse:var(--brand-secondary);
+--text-on-inverse-muted:color-mix(in oklab, var(--brand-secondary) 62%, var(--cocoa-800));
+--text-accent:var(--ember-600);
+--text-link:var(--cocoa-800);
+--text-link-hover:var(--ember-600);
+
+/* --- Semantic lines --------------------------------------------------- */
+--line-hairline:color-mix(in oklab, var(--ink-900) 14%, transparent);
+--line-strong:color-mix(in oklab, var(--ink-900) 34%, transparent);
+--line-inverse:color-mix(in oklab, var(--cream-100) 22%, transparent);
+
+/* --- Interaction ------------------------------------------------------ */
+--action-primary:var(--ink-900);
+--action-primary-hover:var(--cocoa-800);
+--action-on-primary:var(--brand-secondary);
+--action-secondary-border:var(--line-strong);
+--focus-ring:var(--ember-500);
+
+/* --- Status ----------------------------------------------------------- */
+--status-open:#3f6d3a;
+--status-closed:var(--ember-600);
+--status-info:var(--tide-500);
+}
