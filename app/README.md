@@ -6,6 +6,16 @@ CineB — app quản lý cho thuê thiết bị. Next.js (App Router, TypeScript
 2. Dán toàn bộ nội dung file [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) và bấm **Run**.
 3. Tạo xong 9 bảng thì các trang trong app mới hoạt động được — trước đó mọi trang sẽ báo lỗi
    "Could not find the table" vì database còn trống.
+4. Chạy tiếp [`supabase/migrations/0004_members.sql`](supabase/migrations/0004_members.sql) để tạo bảng
+   `members` (đăng nhập bằng Google qua Supabase Auth), rồi `insert` sẵn email những người được phép vào app.
+
+## Deploy trên Vercel
+
+Repo này có `app/` là thư mục chứa project Next.js thật, các phần khác (`docs/`, `CLAUDE.md`...) chỉ là tài
+liệu — khi tạo project trên Vercel phải đặt **Root Directory = `app`** (Settings → General → Root Directory),
+và khai báo 3 biến môi trường trong `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`) ở Settings → Environment Variables, vì file
+`.env.local` không được commit lên Git.
 
 ## Getting Started
 
