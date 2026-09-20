@@ -54,12 +54,12 @@ export default function NewEquipmentModal({ onClose }: { onClose: () => void }) 
         </div>
         <form onSubmit={submit} className="flex flex-col overflow-hidden">
         <div className="modal-body">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input className="input" placeholder="Tên thiết bị" value={ten} onChange={(e) => setTen(e.target.value)} />
             <input className="input" placeholder="Mã/Serial" value={ma} onChange={(e) => setMa(e.target.value)} />
           </div>
           <input className="input" placeholder="Danh mục (Body, Lens, Đèn...)" value={danhMuc} onChange={(e) => setDanhMuc(e.target.value)} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select className="input" value={nguonGoc} onChange={(e) => setNguonGoc(e.target.value as NguonGoc)}>
               <option value="so_huu">Tự sở hữu</option>
               <option value="thue_ngoai">Thuê ngoài</option>
@@ -73,7 +73,7 @@ export default function NewEquipmentModal({ onClose }: { onClose: () => void }) 
             />
           </div>
           {nguonGoc === "thue_ngoai" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 className="input"
                 placeholder="Nhà cung cấp"

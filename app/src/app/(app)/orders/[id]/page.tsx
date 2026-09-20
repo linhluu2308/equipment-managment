@@ -40,7 +40,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       <section className="card">
         <div className="card-title">Khách hàng & ngày thuê</div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <Field label="Tên khách" value={don.khach_hang?.ten} />
           <Field label="Số điện thoại" value={don.khach_hang?.so_dien_thoai} />
           <Field label="Người giới thiệu" value={don.khach_hang?.nguoi_gioi_thieu || "—"} />
@@ -84,7 +84,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       <section className="card space-y-4">
         <div className="card-title !mb-0">Tài chính</div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Stat label="Tổng tiền đơn" value={tong} />
           <Stat label="Đã thu" value={daThu} />
           <Stat label="Công nợ còn lại" value={congNo} highlight={congNo > 0} />
@@ -193,7 +193,7 @@ function Stat({ label, value, highlight }: { label: string; value: number; highl
   return (
     <div>
       <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">{label}</div>
-      <div className="text-lg font-extrabold" style={{ color: highlight ? "#dc2626" : "var(--text-main)" }}>
+      <div className="text-sm sm:text-lg font-extrabold" style={{ color: highlight ? "#dc2626" : "var(--text-main)" }}>
         {value.toLocaleString("vi-VN")}đ
       </div>
     </div>

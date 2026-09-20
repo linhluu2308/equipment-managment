@@ -28,8 +28,8 @@ export default async function OrdersPage({
   return (
     <>
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <input type="text" className="input !w-64" placeholder="🔍 Tên khách · SĐT · Mã đơn..." />
+        <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+          <input type="text" className="input w-full sm:!w-64" placeholder="🔍 Tên khách · SĐT · Mã đơn..." />
           <div className="flex gap-1.5 flex-wrap">
             {TABS.map((t) => (
               <Link

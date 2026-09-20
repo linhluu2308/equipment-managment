@@ -70,46 +70,48 @@ export default function CalendarGrid({ events }: { events: CalendarEvent[] }) {
       </div>
 
       <div className="card">
-        <div
-          className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border"
-          style={{ background: "var(--border-color)", borderColor: "var(--border-color)" }}
-        >
-          {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => (
-            <div
-              key={d}
-              className="bg-[#f8fafc] px-2 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]"
-            >
-              {d}
-            </div>
-          ))}
-          {ngayTrongLuoi.map((day) => {
-            const dayEvents = eventsInDay(day);
-            return (
+        <div className="overflow-x-auto">
+          <div
+            className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border min-w-[640px]"
+            style={{ background: "var(--border-color)", borderColor: "var(--border-color)" }}
+          >
+            {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => (
               <div
-                key={day.toISOString()}
-                className="bg-white p-1"
-                style={{ minHeight: "64px", opacity: isSameMonth(day, thang) ? 1 : 0.4 }}
+                key={d}
+                className="bg-[#f8fafc] px-2 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]"
               >
-                <div className="text-[11px] text-[var(--text-light,#94a3b8)]">{format(day, "d")}</div>
-                <div className="space-y-0.5">
-                  {dayEvents.slice(0, 3).map((ev) => (
-                    <button
-                      key={ev.id}
-                      onClick={() => setXemNhanh(ev)}
-                      className="block w-full truncate rounded px-1 py-0.5 text-left text-[9px] font-semibold text-white"
-                      style={{ background: MAU_BAR[ev.chang] }}
-                      title={`${ev.ten_khach} — ${ev.so_thiet_bi} thiết bị`}
-                    >
-                      {ev.ten_khach}
-                    </button>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <div className="text-[10px] text-[var(--text-muted)]">+{dayEvents.length - 3} khác</div>
-                  )}
-                </div>
+                {d}
               </div>
-            );
-          })}
+            ))}
+            {ngayTrongLuoi.map((day) => {
+              const dayEvents = eventsInDay(day);
+              return (
+                <div
+                  key={day.toISOString()}
+                  className="bg-white p-1"
+                  style={{ minHeight: "64px", opacity: isSameMonth(day, thang) ? 1 : 0.4 }}
+                >
+                  <div className="text-[11px] text-[var(--text-light,#94a3b8)]">{format(day, "d")}</div>
+                  <div className="space-y-0.5">
+                    {dayEvents.slice(0, 3).map((ev) => (
+                      <button
+                        key={ev.id}
+                        onClick={() => setXemNhanh(ev)}
+                        className="block w-full truncate rounded px-1 py-0.5 text-left text-[9px] font-semibold text-white"
+                        style={{ background: MAU_BAR[ev.chang] }}
+                        title={`${ev.ten_khach} — ${ev.so_thiet_bi} thiết bị`}
+                      >
+                        {ev.ten_khach}
+                      </button>
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <div className="text-[10px] text-[var(--text-muted)]">+{dayEvents.length - 3} khác</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

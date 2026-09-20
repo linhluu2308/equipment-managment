@@ -119,7 +119,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
 
         <form onSubmit={submit} className="flex flex-col overflow-hidden">
         <div className="modal-body">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Tên khách hàng">
               <input className="input" value={ten} onChange={(e) => setTen(e.target.value)} />
             </Field>
@@ -135,7 +135,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Ngày bắt đầu thuê">
               <input
                 type="date"
@@ -180,21 +180,23 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
               {filtered.map((tb) => (
                 <label
                   key={tb.id}
-                  className="flex items-center gap-2 border-b border-[var(--border-color)] px-3 py-2.5 text-sm last:border-b-0 hover:bg-[#f8fafc]"
+                  className="flex flex-wrap items-center gap-2 border-b border-[var(--border-color)] px-3 py-2.5 text-sm last:border-b-0 hover:bg-[#f8fafc]"
                 >
                   <input
                     type="checkbox"
                     checked={!!chon[tb.id]}
                     onChange={() => toggleChon(tb)}
                   />
-                  <span className="flex-1">
+                  <span className="flex-1 min-w-[140px]">
                     <span className="font-semibold">{tb.ten}</span>{" "}
                     {tb.ma && <span className="text-[var(--text-muted)] font-mono text-xs">· {tb.ma}</span>}
                     {canhBao[tb.id] && (
                       <span className="badge badge-warning ml-2">{canhBao[tb.id]}</span>
                     )}
                   </span>
-                  <span className="text-[var(--text-muted)]">{tb.gia_hien_hanh.toLocaleString("vi-VN")}đ/ngày</span>
+                  <span className="text-[var(--text-muted)] whitespace-nowrap">
+                    {tb.gia_hien_hanh.toLocaleString("vi-VN")}đ/ngày
+                  </span>
                   {chon[tb.id] && (
                     <input
                       type="number"

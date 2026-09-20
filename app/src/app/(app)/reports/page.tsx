@@ -12,7 +12,7 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="kpi-card">
           <div className="kpi-label">Tổng doanh thu (đơn đã xong)</div>
           <div className="kpi-value">{(tongDoanhThu / 1000).toLocaleString("vi-VN")}k</div>

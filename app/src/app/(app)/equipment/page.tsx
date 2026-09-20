@@ -11,7 +11,7 @@ export default async function EquipmentPage() {
   return (
     <>
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <input type="text" className="input !w-64" placeholder="🔍 Tên/mã thiết bị..." />
+        <input type="text" className="input w-full sm:!w-64" placeholder="🔍 Tên/mã thiết bị..." />
         <EquipmentToolbar />
       </div>
 

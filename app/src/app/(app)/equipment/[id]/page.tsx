@@ -54,12 +54,12 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
 
       <section className="card">
         <div className="card-title">Thông tin & giá</div>
-        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-3">
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
               Giá thuê hiện hành
             </div>
-            <div className="text-lg font-extrabold">{giaHienHanh.toLocaleString("vi-VN")}đ/ngày</div>
+            <div className="text-sm sm:text-lg font-extrabold">{giaHienHanh.toLocaleString("vi-VN")}đ/ngày</div>
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
@@ -123,24 +123,24 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
 
       <section className="card">
         <div className="card-title">Hiệu quả sinh lời</div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
               Doanh thu lũy kế
             </div>
-            <div className="text-lg font-extrabold">{doanhThu.toLocaleString("vi-VN")}đ</div>
+            <div className="text-sm sm:text-lg font-extrabold">{doanhThu.toLocaleString("vi-VN")}đ</div>
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
               Giá vốn
             </div>
-            <div className="text-lg font-extrabold">{giaVonTong.toLocaleString("vi-VN")}đ</div>
+            <div className="text-sm sm:text-lg font-extrabold">{giaVonTong.toLocaleString("vi-VN")}đ</div>
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
               Lợi nhuận ròng
             </div>
-            <div className="text-lg font-extrabold" style={{ color: "#16a34a" }}>
+            <div className="text-sm sm:text-lg font-extrabold" style={{ color: "#16a34a" }}>
               {loiNhuan.toLocaleString("vi-VN")}đ
             </div>
           </div>

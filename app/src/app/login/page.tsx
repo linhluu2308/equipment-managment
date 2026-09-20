@@ -27,8 +27,8 @@ function LoginNoiDung() {
   }
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-[var(--bg-sidebar)]">
-      <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm flex flex-col items-center gap-6">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--bg-sidebar)] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-10 w-full max-w-sm flex flex-col items-center gap-6">
         <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-[var(--text-main)]">
           CineB
           <span className="text-[11px] font-bold bg-[#0369a1] text-[#38bdf8] px-1.5 py-0.5 rounded tracking-wider">
