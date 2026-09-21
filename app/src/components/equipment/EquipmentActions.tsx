@@ -37,7 +37,6 @@ export default function EquipmentActions({ thietBi, giaHienHanh }: { thietBi: Th
       try {
         await xoaThietBi(thietBi.id);
         router.push("/equipment");
-        router.refresh();
       } catch (err) {
         setLoi((err as Error).message);
       }
