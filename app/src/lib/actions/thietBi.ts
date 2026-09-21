@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
 import type { NguonGoc, TrangThaiThietBi } from "@/lib/types";
 
@@ -140,18 +141,23 @@ export async function capNhatTrangThaiThietBi(id: string, trangThai: TrangThaiTh
   revalidatePath(`/equipment/${id}`);
 }
 
-export async function xoaThietBi(id: string) {
+export async function xoaThietBi(id: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { error } = await supabase.from("thiet_bi").delete().eq("id", id);
   if (error) {
     if (error.code === "23503") {
-      throw new Error(
-        "Không thể xoá — thiết bị đã có lịch sử cho thuê/kiểm tra. Hãy đánh dấu \"Hỏng\" hoặc \"Đã thanh lý\" thay vì xoá."
-      );
+      return {
+        error:
+          "Không thể xoá — thiết bị đã có lịch sử cho thuê/kiểm tra. Hãy đánh dấu \"Hỏng\" hoặc \"Đã thanh lý\" thay vì xoá.",
+      };
     }
-    throw new Error(error.message);
+    return { error: error.message };
   }
+
   revalidatePath("/equipment");
+  // redirect() ngay trong action (thay vì router.push() ở client) để tránh Next
+  // render lại trang chi tiết thiết bị vừa bị xoá — gây lỗi React #441.
+  redirect("/equipment");
 }
 
 export interface DongImportThietBi {

@@ -34,12 +34,10 @@ export default function EquipmentActions({ thietBi, giaHienHanh }: { thietBi: Th
     setLoi("");
     if (!confirm(`Xoá vĩnh viễn thiết bị "${thietBi.ten}"? Không thể hoàn tác.`)) return;
     start(async () => {
-      try {
-        await xoaThietBi(thietBi.id);
-        router.push("/equipment");
-      } catch (err) {
-        setLoi((err as Error).message);
-      }
+      // Không bọc try/catch quanh lời gọi này: xoaThietBi() tự redirect ngay trong
+      // Server Action khi thành công, tín hiệu đó không được bắt nhầm thành lỗi ở đây.
+      const ketQua = await xoaThietBi(thietBi.id);
+      if (ketQua?.error) setLoi(ketQua.error);
     });
   }
 
