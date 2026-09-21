@@ -1,5 +1,5 @@
 export type NguonGoc = "so_huu" | "thue_ngoai";
-export type TrangThaiThietBi = "san_sang" | "dang_thue" | "bao_tri";
+export type TrangThaiThietBi = "san_sang" | "dang_thue" | "bao_tri" | "hong" | "thanh_ly";
 export type ChangDon = "yeu_cau" | "bao_gia" | "da_giao" | "cho_tra" | "xong" | "huy";
 export type LoaiThanhToan = "coc" | "dot" | "tat_toan" | "hoan_coc";
 export type TrangThaiGiayTo = "dang_giu" | "da_hoan_tra";
@@ -27,12 +27,16 @@ export const TRANG_THAI_THIET_BI_LABEL: Record<TrangThaiThietBi, string> = {
   san_sang: "Sẵn sàng",
   dang_thue: "Đang thuê",
   bao_tri: "Bảo trì",
+  hong: "Hỏng",
+  thanh_ly: "Đã thanh lý",
 };
 
 export const TRANG_THAI_THIET_BI_BADGE: Record<TrangThaiThietBi, string> = {
   san_sang: "badge-success",
   dang_thue: "badge-danger",
   bao_tri: "badge-neutral",
+  hong: "badge-danger",
+  thanh_ly: "badge-neutral",
 };
 
 export interface ThietBi {

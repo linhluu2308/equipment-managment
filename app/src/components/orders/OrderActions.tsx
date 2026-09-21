@@ -103,7 +103,7 @@ function ActionButton({
 }) {
   return (
     <button disabled={pending} onClick={onClick} className={danger ? "btn-danger-outline" : "btn-primary"}>
-      {children}
+      {pending ? "Đang xử lý..." : children}
     </button>
   );
 }
@@ -148,7 +148,7 @@ function ThanhToanForm({ donId }: { donId: string }) {
         <option>Tiền mặt</option>
       </select>
       <button disabled={pending} className="btn-primary w-full">
-        Ghi nhận
+        {pending ? "Đang lưu..." : "Ghi nhận"}
       </button>
     </form>
   );
@@ -189,7 +189,7 @@ function ChiPhiForm({ donId }: { donId: string }) {
         onChange={(e) => setSoTien(e.target.value)}
       />
       <button disabled={pending} className="btn-primary w-full">
-        Thêm chi phí
+        {pending ? "Đang lưu..." : "Thêm chi phí"}
       </button>
     </form>
   );
@@ -235,7 +235,7 @@ function CocGiayToForm({
       </select>
       <input className="input" placeholder="Số hiệu" value={soHieu} onChange={(e) => setSoHieu(e.target.value)} />
       <button disabled={pending} className="btn-primary w-full">
-        Thêm giấy tờ cọc
+        {pending ? "Đang lưu..." : "Thêm giấy tờ cọc"}
       </button>
       {cocList.filter((c) => c.trang_thai === "dang_giu").length > 0 && (
         <div className="space-y-1 pt-1">
@@ -247,7 +247,7 @@ function CocGiayToForm({
                 key={c.id}
                 disabled={pending}
                 onClick={() => hoanTra(c.id)}
-                className="w-full rounded-lg border border-[var(--border-color)] bg-white py-1.5 text-xs font-semibold text-[var(--text-main)] hover:bg-[#f8fafc]"
+                className="w-full rounded-lg border border-[var(--border-color)] bg-white py-1.5 text-xs font-semibold text-[var(--text-main)] hover:bg-[#f8fafc] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Đánh dấu đã hoàn trả giấy tờ (mã {c.id.slice(0, 6)})
               </button>
@@ -296,7 +296,7 @@ function KiemTraForm({ donId, chiTiet }: { donId: string; chiTiet: DonChiTiet[] 
       </div>
       <input className="input" placeholder="Ghi chú" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
       <button disabled={pending} className="btn-primary w-full">
-        Lưu kiểm tra
+        {pending ? "Đang lưu..." : "Lưu kiểm tra"}
       </button>
     </form>
   );

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getThietBi } from "@/lib/actions/thietBi";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
 import { soNgayThue, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
+import EquipmentActions from "@/components/equipment/EquipmentActions";
 
 export const dynamic = "force-dynamic";
 
@@ -150,6 +151,8 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
           phân bổ theo từng thiết bị trong vòng đầu.
         </p>
       </section>
+
+      <EquipmentActions thietBi={thietBi} giaHienHanh={giaHienHanh} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/admin";
-import type { NguonGoc } from "@/lib/types";
+import type { NguonGoc, TrangThaiThietBi } from "@/lib/types";
 
 export async function listThietBi() {
   const supabase = await createClient();
@@ -89,6 +89,69 @@ export async function createThietBi(input: DauVaoThietBi) {
 
   revalidatePath("/equipment");
   return thietBi;
+}
+
+export interface DauVaoSuaThietBi {
+  ma?: string;
+  ten: string;
+  danh_muc?: string;
+  nguon_goc: NguonGoc;
+  nha_cung_cap?: string;
+  gia_von?: number;
+  mo_ta?: string;
+  anh_url?: string;
+  gia_thue: number;
+}
+
+export async function suaThietBi(id: string, input: DauVaoSuaThietBi, giaHienHanh: number) {
+  if (!input.ten?.trim()) throw new Error("Cần nhập tên thiết bị.");
+  if (!input.gia_thue || input.gia_thue <= 0) throw new Error("Giá thuê/ngày phải là số lớn hơn 0.");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("thiet_bi")
+    .update({
+      ma: input.ma || null,
+      ten: input.ten,
+      danh_muc: input.danh_muc || null,
+      nguon_goc: input.nguon_goc,
+      nha_cung_cap: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap : null,
+      gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
+      mo_ta: input.mo_ta || null,
+      anh_url: input.anh_url || null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  if (input.gia_thue !== giaHienHanh) {
+    const { error: eGia } = await supabase.from("lich_su_gia").insert({ thiet_bi_id: id, gia_thue: input.gia_thue });
+    if (eGia) throw new Error(eGia.message);
+  }
+
+  revalidatePath("/equipment");
+  revalidatePath(`/equipment/${id}`);
+}
+
+export async function capNhatTrangThaiThietBi(id: string, trangThai: TrangThaiThietBi) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("thiet_bi").update({ trang_thai: trangThai }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/equipment");
+  revalidatePath(`/equipment/${id}`);
+}
+
+export async function xoaThietBi(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("thiet_bi").delete().eq("id", id);
+  if (error) {
+    if (error.code === "23503") {
+      throw new Error(
+        "Không thể xoá — thiết bị đã có lịch sử cho thuê/kiểm tra. Hãy đánh dấu \"Hỏng\" hoặc \"Đã thanh lý\" thay vì xoá."
+      );
+    }
+    throw new Error(error.message);
+  }
+  revalidatePath("/equipment");
 }
 
 export interface DongImportThietBi {
