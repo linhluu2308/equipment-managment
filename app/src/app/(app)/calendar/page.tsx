@@ -1,10 +1,22 @@
+import { headers } from "next/headers";
 import { listDonThue } from "@/lib/actions/donThue";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
+import SyncGoogleCalendarBox from "@/components/calendar/SyncGoogleCalendarBox";
 
 export const dynamic = "force-dynamic";
 
+async function layFeedUrl(): Promise<string | null> {
+  const secret = process.env.CALENDAR_FEED_SECRET;
+  if (!secret) return null;
+
+  const h = await headers();
+  const host = h.get("host");
+  const protocol = host?.startsWith("localhost") ? "http" : "https";
+  return `${protocol}://${host}/calendar.ics?key=${secret}`;
+}
+
 export default async function CalendarPage() {
-  const orders = await listDonThue();
+  const [orders, feedUrl] = await Promise.all([listDonThue(), layFeedUrl()]);
 
   const events = orders
     .filter((o) => o.chang !== "huy")
@@ -19,5 +31,10 @@ export default async function CalendarPage() {
       so_thiet_bi: o.don_thue_chi_tiet?.length ?? 0,
     }));
 
-  return <CalendarGrid events={events} />;
+  return (
+    <>
+      <CalendarGrid events={events} />
+      <SyncGoogleCalendarBox feedUrl={feedUrl} />
+    </>
+  );
 }

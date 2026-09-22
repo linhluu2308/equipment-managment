@@ -6,6 +6,12 @@ const DUONG_DAN_CONG_KHAI = ["/login", "/auth/callback"];
 // Next.js 16 đổi quy ước "middleware.ts" -> "proxy.ts" (hàm export cũng đổi tên
 // từ `middleware` sang `proxy`); dùng sai tên cũ khiến mọi trang trả về rỗng im lặng.
 export async function proxy(request: NextRequest) {
+  // Feed lịch Google Calendar tự tải định kỳ, không gửi cookie đăng nhập — route
+  // này tự kiểm tra ?key= riêng, không đi qua kiểm tra session ở đây.
+  if (request.nextUrl.pathname === "/calendar.ics") {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

@@ -5,6 +5,7 @@ import { CHANG_LABEL, type DonThueDetail } from "@/lib/types";
 import { soNgayThue, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
+import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,22 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <h1 className="text-xl font-extrabold font-mono">
             Đơn #{don.id.slice(0, 8).toUpperCase()}
           </h1>
-          {don.chang === "huy" ? (
-            <span className="badge badge-danger">Đã huỷ</span>
-          ) : (
-            <span className="badge badge-info">{CHANG_LABEL[don.chang]}</span>
-          )}
+          <div className="flex items-center gap-2">
+            {don.chang === "huy" ? (
+              <span className="badge badge-danger">Đã huỷ</span>
+            ) : (
+              <span className="badge badge-info">{CHANG_LABEL[don.chang]}</span>
+            )}
+            <XuatBaoGiaButton
+              maDon={don.ma_don ?? don.id.slice(0, 8).toUpperCase()}
+              tenKhach={don.khach_hang?.ten ?? "—"}
+              sdtKhach={don.khach_hang?.so_dien_thoai ?? ""}
+              ngayBatDau={don.ngay_bat_dau}
+              ngayTraDuKien={don.ngay_tra_du_kien}
+              chiTiet={don.don_thue_chi_tiet}
+              chang={don.chang}
+            />
+          </div>
         </div>
         <Progress chang={don.chang} />
       </div>

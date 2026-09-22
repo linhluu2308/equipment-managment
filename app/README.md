@@ -13,9 +13,9 @@ CineB — app quản lý cho thuê thiết bị. Next.js (App Router, TypeScript
 
 Repo này có `app/` là thư mục chứa project Next.js thật, các phần khác (`docs/`, `CLAUDE.md`...) chỉ là tài
 liệu — khi tạo project trên Vercel phải đặt **Root Directory = `app`** (Settings → General → Root Directory),
-và khai báo 3 biến môi trường trong `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`) ở Settings → Environment Variables, vì file
-`.env.local` không được commit lên Git.
+và khai báo 4 biến môi trường trong `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `CALENDAR_FEED_SECRET`) ở Settings → Environment
+Variables, vì file `.env.local` không được commit lên Git.
 
 ## Getting Started
 
