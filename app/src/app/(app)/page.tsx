@@ -9,12 +9,12 @@ function todayStr() {
 }
 
 export default async function DashboardPage() {
-  const { donDangChay, donSapToi, tonKho } = await layTongQuan();
+  const { donDangChay, donSapToi, donQuaHan, tonKho } = await layTongQuan();
   const today = todayStr();
 
   const kpis = [
     { label: "Đơn thuê đang chạy", value: donDangChay.length },
-    { label: "Cần bàn giao hôm nay", value: donDangChay.filter((o) => o.ngay_bat_dau === today).length },
+    { label: "Cần bàn giao hôm nay", value: donSapToi.filter((o) => o.ngay_bat_dau === today).length },
     { label: "Dự kiến nhận về hôm nay", value: donDangChay.filter((o) => o.ngay_tra_du_kien === today).length },
     { label: "Thiết bị sẵn sàng", value: tonKho.reduce((s, t) => s + t.conTrong, 0) },
   ];
@@ -29,6 +29,18 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {donQuaHan.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--status-danger-text)" }}>
+          <div className="card-title !mb-1" style={{ color: "var(--status-danger-text)" }}>
+            ⚠️ Đơn quá hạn trả ({donQuaHan.length})
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mb-3">
+            Đã qua ngày trả dự kiến nhưng đơn chưa được nhận thiết bị về kho.
+          </p>
+          <OrderTable orders={donQuaHan} empty="" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-4">
         <div className="card">
