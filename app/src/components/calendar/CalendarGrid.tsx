@@ -9,6 +9,7 @@ import {
   endOfWeek,
   format,
   isSameMonth,
+  isToday,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
@@ -85,13 +86,26 @@ export default function CalendarGrid({ events }: { events: CalendarEvent[] }) {
             ))}
             {ngayTrongLuoi.map((day) => {
               const dayEvents = eventsInDay(day);
+              const homNay = isToday(day);
               return (
                 <div
                   key={day.toISOString()}
-                  className="bg-white p-1"
-                  style={{ minHeight: "64px", opacity: isSameMonth(day, thang) ? 1 : 0.4 }}
+                  className={homNay ? "p-1 ring-2 ring-inset ring-[var(--accent-primary)]" : "bg-white p-1"}
+                  style={{
+                    minHeight: "64px",
+                    opacity: isSameMonth(day, thang) ? 1 : 0.4,
+                    background: homNay ? "var(--status-info-bg)" : "#fff",
+                  }}
                 >
-                  <div className="text-[11px] text-[var(--text-light,#94a3b8)]">{format(day, "d")}</div>
+                  <div
+                    className={
+                      homNay
+                        ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[11px] font-bold text-white"
+                        : "text-[11px] text-[var(--text-light,#94a3b8)]"
+                    }
+                  >
+                    {format(day, "d")}
+                  </div>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 3).map((ev) => (
                       <button
