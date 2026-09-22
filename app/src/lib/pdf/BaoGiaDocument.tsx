@@ -96,7 +96,7 @@ const s = StyleSheet.create({
   tongCongGiaTri: { fontSize: 10, fontWeight: "bold" },
   dieuKhoanTieuDe: { fontSize: 10, fontWeight: "bold", marginTop: 10, marginBottom: 4 },
   dieuKhoanDong: { fontSize: 8.5, marginBottom: 1.5, color: "#1e293b" },
-  camOn: { fontSize: 9, fontStyle: "italic", marginTop: 14, marginBottom: 20, color: "#1e293b" },
+  camOn: { fontSize: 9, marginTop: 14, marginBottom: 20, color: "#1e293b" },
   kyKhoi: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
   kyCot: { width: "40%", textAlign: "center" },
   kyNhan: { fontSize: 9, fontWeight: "bold", marginBottom: 40 },

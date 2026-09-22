@@ -28,11 +28,13 @@ export default function XuatBaoGiaButton({
   chang: ChangDon;
 }) {
   const [dangXuat, setDangXuat] = useState(false);
+  const [loi, setLoi] = useState("");
 
   if (chang === "yeu_cau" || chang === "huy") return null;
 
   async function xuatPdf() {
     setDangXuat(true);
+    setLoi("");
     try {
       const [{ pdf }, { default: BaoGiaDocument }] = await Promise.all([
         import("@react-pdf/renderer"),
@@ -69,14 +71,20 @@ export default function XuatBaoGiaButton({
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Xuất báo giá PDF lỗi:", err);
+      setLoi("Xuất PDF thất bại. Thử lại hoặc báo kỹ thuật kèm thời điểm bấm nút.");
     } finally {
       setDangXuat(false);
     }
   }
 
   return (
-    <button type="button" onClick={xuatPdf} disabled={dangXuat} className="btn-secondary">
-      {dangXuat ? "Đang xuất..." : "📄 Xuất báo giá PDF"}
-    </button>
+    <div className="inline-flex flex-col items-start gap-1">
+      <button type="button" onClick={xuatPdf} disabled={dangXuat} className="btn-secondary">
+        {dangXuat ? "Đang xuất..." : "📄 Xuất báo giá PDF"}
+      </button>
+      {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
+    </div>
   );
 }
