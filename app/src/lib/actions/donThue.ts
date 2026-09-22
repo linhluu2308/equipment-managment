@@ -58,6 +58,10 @@ export interface DauVaoTaoDonThue {
 }
 
 export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: string }> {
+  if (input.ngay_tra_du_kien < input.ngay_bat_dau) {
+    return { error: "Ngày trả dự kiến không được sớm hơn ngày bắt đầu thuê." };
+  }
+
   for (const tb of input.thietBi) {
     if (tb.phan_tram_chiet_khau < 0 || tb.phan_tram_chiet_khau > 100) {
       return { error: "Chiết khấu phải nằm trong khoảng 0–100%." };

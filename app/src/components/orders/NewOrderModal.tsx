@@ -84,6 +84,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     setLoi("");
     if (!ten || !sdt) return setLoi("Cần nhập tên và số điện thoại khách hàng.");
     if (!ngayBatDau || !ngayTra) return setLoi("Cần chọn ngày bắt đầu và ngày trả dự kiến.");
+    if (ngayTra < ngayBatDau) return setLoi("Ngày trả dự kiến không được sớm hơn ngày bắt đầu thuê.");
     if (Object.keys(chon).length === 0) return setLoi("Cần chọn ít nhất một thiết bị.");
 
     setDangGui(true);
@@ -134,6 +135,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                 type="date"
                 className="input"
                 value={ngayBatDau}
+                max={ngayTra || undefined}
                 onChange={(e) => setNgayBatDau(e.target.value)}
               />
             </Field>
@@ -142,6 +144,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                 type="date"
                 className="input"
                 value={ngayTra}
+                min={ngayBatDau || undefined}
                 onChange={(e) => setNgayTra(e.target.value)}
               />
             </Field>
