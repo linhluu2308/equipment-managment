@@ -13,7 +13,14 @@ export interface DongBaoCaoThietBi {
   loiNhuan: number;
 }
 
-export async function layBaoCaoThietBi(): Promise<{
+/**
+ * @param tuNgay/@param denNgay (YYYY-MM-DD, bao gồm 2 đầu mút) — lọc theo ngày bắt đầu
+ * thuê của đơn. Bỏ trống thì lấy toàn bộ thời gian (không lọc).
+ */
+export async function layBaoCaoThietBi(
+  tuNgay?: string,
+  denNgay?: string
+): Promise<{
   dong: DongBaoCaoThietBi[];
   tongDoanhThu: number;
   tongLoiNhuan: number;
@@ -38,7 +45,11 @@ export async function layBaoCaoThietBi(): Promise<{
     don_thue: { id: string; chang: string; ngay_bat_dau: string; ngay_tra_du_kien: string };
   };
 
-  const rows = (chiTietList ?? []) as unknown as Row[];
+  const tatCaRows = (chiTietList ?? []) as unknown as Row[];
+  const rows =
+    tuNgay && denNgay
+      ? tatCaRows.filter((r) => r.don_thue.ngay_bat_dau >= tuNgay && r.don_thue.ngay_bat_dau <= denNgay)
+      : tatCaRows;
   const donHoanTatIds = new Set<string>();
 
   const dong: DongBaoCaoThietBi[] = (thietBiList ?? []).map((tb) => {

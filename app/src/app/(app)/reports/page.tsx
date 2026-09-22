@@ -1,9 +1,45 @@
+import Link from "next/link";
+import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import { layBaoCaoThietBi } from "@/lib/queries/baoCao";
+import KhoangThoiGianForm from "@/components/reports/KhoangThoiGianForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReportsPage() {
-  const { dong, tongDoanhThu, tongLoiNhuan, soDonHoanTat } = await layBaoCaoThietBi();
+function ngayStr(d: Date): string {
+  return format(d, "yyyy-MM-dd");
+}
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  const { from, to } = await searchParams;
+
+  const homNay = new Date();
+  const thangNay = { from: ngayStr(startOfMonth(homNay)), to: ngayStr(endOfMonth(homNay)) };
+  const thangTruoc = {
+    from: ngayStr(startOfMonth(subMonths(homNay, 1))),
+    to: ngayStr(endOfMonth(subMonths(homNay, 1))),
+  };
+
+  let tuNgay: string;
+  let denNgay: string;
+  let preset: "thang_nay" | "thang_truoc" | "tuy_chon";
+
+  if (!from && !to) {
+    ({ from: tuNgay, to: denNgay } = thangNay);
+    preset = "thang_nay";
+  } else if (from === thangTruoc.from && to === thangTruoc.to) {
+    ({ from: tuNgay, to: denNgay } = thangTruoc);
+    preset = "thang_truoc";
+  } else {
+    tuNgay = from || thangNay.from;
+    denNgay = to || thangNay.to;
+    preset = "tuy_chon";
+  }
+
+  const { dong, tongDoanhThu, tongLoiNhuan, soDonHoanTat } = await layBaoCaoThietBi(tuNgay, denNgay);
 
   const chuaTungChoThue = dong.filter((d) => d.luotThue === 0);
   const daChoThue = dong.filter((d) => d.luotThue > 0);
@@ -12,6 +48,24 @@ export default async function ReportsPage() {
 
   return (
     <>
+      <div className="action-bar">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Link href="/reports" className={`pill ${preset === "thang_nay" ? "active" : ""}`}>
+            Tháng này
+          </Link>
+          <Link
+            href={`/reports?from=${thangTruoc.from}&to=${thangTruoc.to}`}
+            className={`pill ${preset === "thang_truoc" ? "active" : ""}`}
+          >
+            Tháng trước
+          </Link>
+          <KhoangThoiGianForm tuNgay={tuNgay} denNgay={denNgay} dangChon={preset === "tuy_chon"} />
+        </div>
+        <div className="text-xs text-[var(--text-muted)] font-mono">
+          {tuNgay} → {denNgay}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="kpi-card">
           <div className="kpi-label">Tổng doanh thu (đơn đã xong)</div>
@@ -50,8 +104,9 @@ export default async function ReportsPage() {
       <div className="card">
         <div className="card-title">Xếp hạng lợi nhuận & tần suất theo thiết bị</div>
         <p className="text-xs text-[var(--text-muted)] mb-3">
-          Doanh thu/lợi nhuận chỉ tính trên đơn đã ở chặng &quot;Xong&quot;. Tần suất &amp; số ngày thuê tính trên mọi
-          đơn chưa huỷ (kể cả đang chạy), phản ánh mức độ được chọn thuê thực tế.
+          Lọc theo ngày bắt đầu thuê nằm trong khoảng đã chọn ở trên. Doanh thu/lợi nhuận chỉ tính trên đơn đã ở chặng
+          &quot;Xong&quot;. Tần suất &amp; số ngày thuê tính trên mọi đơn chưa huỷ (kể cả đang chạy), phản ánh mức độ
+          được chọn thuê thực tế.
         </p>
         <div className="table-container" style={{ border: "none", boxShadow: "none" }}>
           <table>
