@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
 import { khoangNgayGiao } from "@/lib/calculations";
 import type { ChangDon } from "@/lib/types";
@@ -56,13 +57,13 @@ export interface DauVaoTaoDonThue {
   thietBi: { thiet_bi_id: string; gia_thue_chot: number; phan_tram_chiet_khau: number }[];
 }
 
-export async function taoDonThue(input: DauVaoTaoDonThue) {
+export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: string }> {
   for (const tb of input.thietBi) {
     if (tb.phan_tram_chiet_khau < 0 || tb.phan_tram_chiet_khau > 100) {
-      throw new Error("Chiết khấu phải nằm trong khoảng 0–100%.");
+      return { error: "Chiết khấu phải nằm trong khoảng 0–100%." };
     }
     if (!tb.gia_thue_chot || tb.gia_thue_chot <= 0) {
-      throw new Error("Giá thuê chốt cho thiết bị phải lớn hơn 0.");
+      return { error: "Giá thuê chốt cho thiết bị phải lớn hơn 0." };
     }
   }
 
@@ -71,9 +72,9 @@ export async function taoDonThue(input: DauVaoTaoDonThue) {
   for (const tb of input.thietBi) {
     const kq = await kiemTraTrungLich(tb.thiet_bi_id, input.ngay_bat_dau, input.ngay_tra_du_kien);
     if (kq.tinhTrang === "khoa_cung") {
-      throw new Error(
-        `Thiết bị không còn trống trong khoảng ngày này (đã bị giữ bởi đơn ${kq.donTrung?.ma_don ?? kq.donTrung?.id}).`
-      );
+      return {
+        error: `Thiết bị không còn trống trong khoảng ngày này (đã bị giữ bởi đơn ${kq.donTrung?.ma_don ?? kq.donTrung?.id}).`,
+      };
     }
   }
 
@@ -88,18 +89,13 @@ export async function taoDonThue(input: DauVaoTaoDonThue) {
     p_ghi_chu: input.ghi_chu || null,
     p_thiet_bi: input.thietBi,
   });
-  if (eRpc) throw new Error(eRpc.message);
-
-  const { data: donThue, error: eGet } = await supabase
-    .from("don_thue")
-    .select("*")
-    .eq("id", donId)
-    .single();
-  if (eGet) throw new Error(eGet.message);
+  if (eRpc) return { error: eRpc.message };
 
   revalidatePath("/orders");
   revalidatePath("/");
-  return donThue;
+  // redirect() ngay trong action (thay vì router.push()+router.refresh() ở client) để
+  // tránh Next tự render lại trang đang gọi action — nguyên nhân lỗi React #441 trước đây.
+  redirect(`/orders/${donId}`);
 }
 
 export async function xoaThietBiKhoiDon(chiTietId: string, donId: string) {

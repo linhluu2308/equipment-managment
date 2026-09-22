@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { listThietBi } from "@/lib/actions/thietBi";
 import { taoDonThue, kiemTraTrungLich } from "@/lib/actions/donThue";
 
@@ -17,7 +16,6 @@ type ThietBiOption = {
 type ChonThietBi = { thiet_bi_id: string; gia_thue_chot: number; phan_tram_chiet_khau: number };
 
 export default function NewOrderModal({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
   const [thietBiList, setThietBiList] = useState<ThietBiOption[]>([]);
   const [tuKhoa, setTuKhoa] = useState("");
   const [danhMuc, setDanhMuc] = useState("Tất cả");
@@ -89,22 +87,17 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     if (Object.keys(chon).length === 0) return setLoi("Cần chọn ít nhất một thiết bị.");
 
     setDangGui(true);
-    try {
-      const don = await taoDonThue({
-        khachHang: { ten, so_dien_thoai: sdt, nguoi_gioi_thieu: nguoiGioiThieu || undefined },
-        ngay_bat_dau: ngayBatDau,
-        ngay_tra_du_kien: ngayTra,
-        ghi_chu: ghiChu || undefined,
-        thietBi: Object.values(chon),
-      });
-      router.push(`/orders/${don.id}`);
-      router.refresh();
-      onClose();
-    } catch (err) {
-      setLoi((err as Error).message);
-    } finally {
-      setDangGui(false);
-    }
+    // Không bọc try/catch quanh lời gọi này: taoDonThue() tự redirect ngay trong
+    // Server Action khi thành công, tín hiệu đó không được bắt nhầm thành lỗi ở đây.
+    const ketQua = await taoDonThue({
+      khachHang: { ten, so_dien_thoai: sdt, nguoi_gioi_thieu: nguoiGioiThieu || undefined },
+      ngay_bat_dau: ngayBatDau,
+      ngay_tra_du_kien: ngayTra,
+      ghi_chu: ghiChu || undefined,
+      thietBi: Object.values(chon),
+    });
+    setDangGui(false);
+    if (ketQua?.error) setLoi(ketQua.error);
   }
 
   return (
