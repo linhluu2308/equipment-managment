@@ -5,6 +5,14 @@ export function soNgayThue(ngayBatDau: string, ngayTraDuKien: string): number {
   return differenceInCalendarDays(parseISO(ngayTraDuKien), parseISO(ngayBatDau)) + 1;
 }
 
+/**
+ * Ngày trả dùng để tính tiền: ưu tiên ngày trả thực tế (khách trả sớm/trễ hơn báo
+ * giá ban đầu) nếu đã ghi nhận, chưa có thì tạm dùng ngày trả dự kiến.
+ */
+export function ngayTraHieuLuc(don: { ngay_tra_du_kien: string; ngay_tra_thuc_te?: string | null }): string {
+  return don.ngay_tra_thuc_te || don.ngay_tra_du_kien;
+}
+
 export function thanhTienDong(
   line: Pick<DonThueChiTiet, "gia_thue_chot" | "phan_tram_chiet_khau">,
   soNgay: number

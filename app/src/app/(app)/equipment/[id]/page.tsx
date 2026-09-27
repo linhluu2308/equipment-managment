@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getThietBi } from "@/lib/actions/thietBi";
 import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
-import { soNgayThue, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
+import { ngayTraHieuLuc, soNgayThue, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
 import EquipmentActions from "@/components/equipment/EquipmentActions";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +32,12 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
 
   const donXong = donHang.filter((d) => d.don_thue?.chang === "xong");
   const doanhThu = donXong.reduce((sum, d) => {
-    const soNgay = soNgayThue(d.don_thue.ngay_bat_dau, d.don_thue.ngay_tra_du_kien);
+    const soNgay = soNgayThue(d.don_thue.ngay_bat_dau, ngayTraHieuLuc(d.don_thue));
     return sum + thanhTienDong(d, soNgay);
   }, 0);
   const giaVonTong = thietBi.gia_von
     ? donXong.reduce(
-        (sum, d) => sum + thietBi.gia_von! * soNgayThue(d.don_thue.ngay_bat_dau, d.don_thue.ngay_tra_du_kien),
+        (sum, d) => sum + thietBi.gia_von! * soNgayThue(d.don_thue.ngay_bat_dau, ngayTraHieuLuc(d.don_thue)),
         0
       )
     : 0;
@@ -122,7 +122,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
           {donHang.map((d) => (
             <li key={d.id} className="flex justify-between py-1.5">
               <Link href={`/orders/${d.don_thue.id}`} className="font-semibold text-[var(--accent-primary)] hover:underline">
-                {d.don_thue.khach_hang?.ten} · {d.don_thue.ngay_bat_dau} → {d.don_thue.ngay_tra_du_kien}
+                {d.don_thue.khach_hang?.ten} · {d.don_thue.ngay_bat_dau} → {ngayTraHieuLuc(d.don_thue)}
               </Link>
               <span className="text-[var(--text-muted)]">{d.don_thue.chang}</span>
             </li>

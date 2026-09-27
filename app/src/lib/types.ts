@@ -97,6 +97,7 @@ export interface DonThue {
   chang: ChangDon;
   ngay_bat_dau: string;
   ngay_tra_du_kien: string;
+  ngay_tra_thuc_te: string | null;
   ghi_chu: string | null;
   created_at: string;
   updated_at: string;

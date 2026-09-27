@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDonThue } from "@/lib/actions/donThue";
 import { CHANG_LABEL, type DonThueDetail } from "@/lib/types";
-import { soNgayThue, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { ngayTraHieuLuc, soNgayThue, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
@@ -15,7 +15,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   if (!donRaw) notFound();
   const don = donRaw as unknown as DonThueDetail;
 
-  const soNgay = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
+  const soNgay = soNgayThue(don.ngay_bat_dau, ngayTraHieuLuc(don));
   const tong = tongTienDon(don.don_thue_chi_tiet, soNgay, don.chi_phi);
   const daThu = tongDaThu(don.thanh_toan);
   const congNo = tong - daThu;
@@ -56,7 +56,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <Field label="Tên khách" value={don.khach_hang?.ten} />
           <Field label="Số điện thoại" value={don.khach_hang?.so_dien_thoai} />
           <Field label="Người giới thiệu" value={don.khach_hang?.nguoi_gioi_thieu || "—"} />
-          <Field label="Dải ngày thuê" value={`${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} (${soNgay} ngày)`} />
+          <Field
+            label="Dải ngày thuê"
+            value={
+              don.ngay_tra_thuc_te
+                ? `${don.ngay_bat_dau} → ${don.ngay_tra_thuc_te} thực tế (dự kiến ${don.ngay_tra_du_kien}) · ${soNgay} ngày`
+                : `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} dự kiến (${soNgay} ngày)`
+            }
+          />
         </div>
         {don.ghi_chu && <p className="mt-2 text-sm text-[var(--text-muted)]">Ghi chú: {don.ghi_chu}</p>}
       </section>

@@ -31,7 +31,7 @@ export async function getThietBi(id: string) {
         .order("ngay_ap_dung", { ascending: false }),
       supabase
         .from("don_thue_chi_tiet")
-        .select("*, don_thue(id, ma_don, chang, ngay_bat_dau, ngay_tra_du_kien, khach_hang(ten))")
+        .select("*, don_thue(id, ma_don, chang, ngay_bat_dau, ngay_tra_du_kien, ngay_tra_thuc_te, khach_hang(ten))")
         .eq("thiet_bi_id", id),
       supabase
         .from("kiem_tra_tinh_trang")

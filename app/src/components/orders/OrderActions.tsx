@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { chuyenChangDon } from "@/lib/actions/donThue";
+import { soNgayThue } from "@/lib/calculations";
 import { ghiThanhToan } from "@/lib/actions/thanhToan";
 import { ghiChiPhi } from "@/lib/actions/chiPhi";
 import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
@@ -13,6 +14,8 @@ type DonChiTiet = { id: string; thiet_bi_id: string; thiet_bi: { ten: string } |
 type DonForActions = {
   id: string;
   chang: ChangDon;
+  ngay_bat_dau: string;
+  ngay_tra_du_kien: string;
   don_thue_chi_tiet: DonChiTiet[];
   coc_giay_to: { id: string; trang_thai: string }[];
 };
@@ -21,12 +24,13 @@ export default function OrderActions({ don }: { don: DonForActions }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [loi, setLoi] = useState("");
+  const [ngayTraThucTe, setNgayTraThucTe] = useState(don.ngay_tra_du_kien);
 
-  function chuyenChang(changMoi: ChangDon) {
+  function chuyenChang(changMoi: ChangDon, ngayTraThucTeParam?: string) {
     setLoi("");
     start(async () => {
       try {
-        await chuyenChangDon(don.id, changMoi);
+        await chuyenChangDon(don.id, changMoi, ngayTraThucTeParam);
         router.refresh();
       } catch (err) {
         setLoi((err as Error).message);
@@ -69,12 +73,33 @@ export default function OrderActions({ don }: { don: DonForActions }) {
             Nhận thiết bị về kho
           </ActionButton>
         )}
-        {don.chang === "cho_tra" && (
-          <ActionButton onClick={() => chuyenChang("xong")} pending={pending}>
+      </div>
+
+      {don.chang === "cho_tra" && (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              Ngày trả thực tế
+            </label>
+            <input
+              className="input"
+              type="date"
+              min={don.ngay_bat_dau}
+              value={ngayTraThucTe}
+              onChange={(e) => setNgayTraThucTe(e.target.value)}
+            />
+          </div>
+          <ActionButton onClick={() => chuyenChang("xong", ngayTraThucTe)} pending={pending}>
             Chốt công nợ & Hoàn tất
           </ActionButton>
-        )}
-      </div>
+          {ngayTraThucTe !== don.ngay_tra_du_kien && (
+            <p className="w-full text-xs text-[var(--text-muted)]">
+              Khác ngày dự kiến ({don.ngay_tra_du_kien}) — doanh thu, giá vốn và công nợ nhà cung cấp sẽ tính theo{" "}
+              {soNgayThue(don.ngay_bat_dau, ngayTraThucTe)} ngày thuê thực tế.
+            </p>
+          )}
+        </div>
+      )}
 
       {don.chang !== "yeu_cau" && (
         <div className="grid gap-4 border-t border-[var(--border-color)] pt-4 md:grid-cols-2">

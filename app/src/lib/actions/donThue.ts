@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
-import { khoangNgayGiao, soNgayThue } from "@/lib/calculations";
+import { khoangNgayGiao, ngayTraHieuLuc, soNgayThue } from "@/lib/calculations";
 import type { ChangDon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
@@ -118,11 +118,11 @@ const CHUYEN_TIEP: Record<ChangDon, ChangDon[]> = {
   huy: [],
 };
 
-export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
+export async function chuyenChangDon(donId: string, changMoi: ChangDon, ngayTraThucTe?: string) {
   const supabase = await createClient();
   const { data: don, error: eGet } = await supabase
     .from("don_thue")
-    .select("chang")
+    .select("chang, ngay_bat_dau, ngay_tra_du_kien")
     .eq("id", donId)
     .single();
   if (eGet) throw new Error(eGet.message);
@@ -143,11 +143,17 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
     if (thieu.length > 0) {
       throw new Error("Chưa kiểm tra tình trạng đầy đủ cho tất cả thiết bị trong đơn.");
     }
+    if (ngayTraThucTe && ngayTraThucTe < don.ngay_bat_dau) {
+      throw new Error("Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.");
+    }
   }
 
   const { data: updated, error } = await supabase
     .from("don_thue")
-    .update({ chang: changMoi })
+    .update({
+      chang: changMoi,
+      ...(changMoi === "xong" ? { ngay_tra_thuc_te: ngayTraThucTe || don.ngay_tra_du_kien } : {}),
+    })
     .eq("id", donId)
     .eq("chang", don.chang) // chỉ ghi nếu chặng vẫn đúng như lúc vừa đọc ở trên
     .select("id");
@@ -186,7 +192,7 @@ async function phatSinhCongNoNccChoDon(donId: string) {
 
   const { data: don, error: eDon } = await supabase
     .from("don_thue")
-    .select("ngay_bat_dau, ngay_tra_du_kien")
+    .select("ngay_bat_dau, ngay_tra_du_kien, ngay_tra_thuc_te")
     .eq("id", donId)
     .single();
   if (eDon) throw new Error(eDon.message);
@@ -197,7 +203,7 @@ async function phatSinhCongNoNccChoDon(donId: string) {
     .eq("don_thue_id", donId);
   if (eChiTiet) throw new Error(eChiTiet.message);
 
-  const soNgay = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
+  const soNgay = soNgayThue(don.ngay_bat_dau, ngayTraHieuLuc(don));
   type Dong = { thiet_bi_id: string; thiet_bi: { nguon_goc: string; nha_cung_cap_id: string | null; gia_von: number | null } | null };
 
   const rows = (chiTiet as unknown as Dong[])

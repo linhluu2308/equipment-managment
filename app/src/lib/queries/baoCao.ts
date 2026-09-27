@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/admin";
-import { soNgayThue, thanhTienDong } from "@/lib/calculations";
+import { ngayTraHieuLuc, soNgayThue, thanhTienDong } from "@/lib/calculations";
 
 export interface DongBaoCaoThietBi {
   id: string;
@@ -35,14 +35,22 @@ export async function layBaoCaoThietBi(
 
   const { data: chiTietList, error: e2 } = await supabase
     .from("don_thue_chi_tiet")
-    .select("thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, don_thue!inner(id, chang, ngay_bat_dau, ngay_tra_du_kien)");
+    .select(
+      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, don_thue!inner(id, chang, ngay_bat_dau, ngay_tra_du_kien, ngay_tra_thuc_te)"
+    );
   if (e2) throw new Error(e2.message);
 
   type Row = {
     thiet_bi_id: string;
     gia_thue_chot: number;
     phan_tram_chiet_khau: number;
-    don_thue: { id: string; chang: string; ngay_bat_dau: string; ngay_tra_du_kien: string };
+    don_thue: {
+      id: string;
+      chang: string;
+      ngay_bat_dau: string;
+      ngay_tra_du_kien: string;
+      ngay_tra_thuc_te: string | null;
+    };
   };
 
   const tatCaRows = (chiTietList ?? []) as unknown as Row[];
@@ -56,19 +64,19 @@ export async function layBaoCaoThietBi(
     const cuaThietBi = rows.filter((r) => r.thiet_bi_id === tb.id && r.don_thue.chang !== "huy");
     const luotThue = cuaThietBi.length;
     const tongNgayThue = cuaThietBi.reduce(
-      (sum, r) => sum + soNgayThue(r.don_thue.ngay_bat_dau, r.don_thue.ngay_tra_du_kien),
+      (sum, r) => sum + soNgayThue(r.don_thue.ngay_bat_dau, ngayTraHieuLuc(r.don_thue)),
       0
     );
 
     const daXong = cuaThietBi.filter((r) => r.don_thue.chang === "xong");
     const doanhThu = daXong.reduce((sum, r) => {
       donHoanTatIds.add(r.don_thue.id);
-      const soNgay = soNgayThue(r.don_thue.ngay_bat_dau, r.don_thue.ngay_tra_du_kien);
+      const soNgay = soNgayThue(r.don_thue.ngay_bat_dau, ngayTraHieuLuc(r.don_thue));
       return sum + thanhTienDong(r, soNgay);
     }, 0);
     const giaVon = tb.gia_von
       ? daXong.reduce(
-          (sum, r) => sum + tb.gia_von! * soNgayThue(r.don_thue.ngay_bat_dau, r.don_thue.ngay_tra_du_kien),
+          (sum, r) => sum + tb.gia_von! * soNgayThue(r.don_thue.ngay_bat_dau, ngayTraHieuLuc(r.don_thue)),
           0
         )
       : 0;

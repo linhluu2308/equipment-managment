@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listDonThue } from "@/lib/actions/donThue";
 import { CHANG_BADGE, CHANG_LABEL, type ChangDon } from "@/lib/types";
-import { soNgayThue, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { ngayTraHieuLuc, soNgayThue, tongTienDon, tongDaThu } from "@/lib/calculations";
 import NewOrderButton from "@/components/orders/NewOrderButton";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export default async function OrdersPage({
           </thead>
           <tbody>
             {orders.map((o) => {
-              const soNgay = soNgayThue(o.ngay_bat_dau, o.ngay_tra_du_kien);
+              const soNgay = soNgayThue(o.ngay_bat_dau, ngayTraHieuLuc(o));
               const tong = tongTienDon(o.don_thue_chi_tiet, soNgay, o.chi_phi);
               const daThu = tongDaThu(o.thanh_toan);
               return (
@@ -71,7 +71,7 @@ export default async function OrdersPage({
                     <div className="text-xs text-[var(--text-muted)]">{o.khach_hang?.so_dien_thoai}</div>
                   </td>
                   <td>
-                    {o.ngay_bat_dau} → {o.ngay_tra_du_kien} ({soNgay} ngày)
+                    {o.ngay_bat_dau} → {ngayTraHieuLuc(o)} ({soNgay} ngày)
                   </td>
                   <td>{tong.toLocaleString("vi-VN")}đ</td>
                   <td>{daThu.toLocaleString("vi-VN")}đ</td>
