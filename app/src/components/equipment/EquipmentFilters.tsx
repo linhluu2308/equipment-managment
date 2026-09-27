@@ -23,6 +23,12 @@ const DANH_MUC_OPTIONS: { value: string; label: string; tuKhoa: string[] }[] = [
   { value: "grip", label: "Grip & Phụ kiện", tuKhoa: ["grip", "phu kien", "accessory"] },
 ];
 
+const NGUON_GOC_OPTIONS: { value: string; label: string }[] = [
+  { value: "tat_ca", label: "Tất cả nguồn gốc" },
+  { value: "so_huu", label: "Tự sở hữu" },
+  { value: "thue_ngoai", label: "Thuê ngoài" },
+];
+
 const DAU_COMBINING_MARKS = /[̀-ͯ]/g;
 
 function boDau(s: string): string {
@@ -36,6 +42,7 @@ function boDau(s: string): string {
 export default function EquipmentFilters({ thietBiList }: { thietBiList: ThietBiRow[] }) {
   const [tuKhoa, setTuKhoa] = useState("");
   const [danhMuc, setDanhMuc] = useState("tat_ca");
+  const [nguonGoc, setNguonGoc] = useState("tat_ca");
 
   const filtered = useMemo(() => {
     const tuKhoaChuan = boDau(tuKhoa.trim());
@@ -52,9 +59,11 @@ export default function EquipmentFilters({ thietBiList }: { thietBiList: ThietBi
         danhMuc === "tat_ca" ||
         (tuyChonDanhMuc?.tuKhoa.some((k) => danhMucChuan.includes(k)) ?? false);
 
-      return khopTuKhoa && khopDanhMuc;
+      const khopNguonGoc = nguonGoc === "tat_ca" || tb.nguon_goc === nguonGoc;
+
+      return khopTuKhoa && khopDanhMuc && khopNguonGoc;
     });
-  }, [thietBiList, tuKhoa, danhMuc]);
+  }, [thietBiList, tuKhoa, danhMuc, nguonGoc]);
 
   return (
     <>
@@ -71,6 +80,13 @@ export default function EquipmentFilters({ thietBiList }: { thietBiList: ThietBi
             {DANH_MUC_OPTIONS.map((d) => (
               <option key={d.value} value={d.value}>
                 {d.label}
+              </option>
+            ))}
+          </select>
+          <select className="input sm:!w-48" value={nguonGoc} onChange={(e) => setNguonGoc(e.target.value)}>
+            {NGUON_GOC_OPTIONS.map((n) => (
+              <option key={n.value} value={n.value}>
+                {n.label}
               </option>
             ))}
           </select>
