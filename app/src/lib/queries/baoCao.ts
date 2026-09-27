@@ -23,6 +23,8 @@ export async function layBaoCaoThietBi(
 ): Promise<{
   dong: DongBaoCaoThietBi[];
   tongDoanhThu: number;
+  tongGiaVon: number;
+  tongChiPhi: number;
   tongLoiNhuan: number;
   soDonHoanTat: number;
 }> {
@@ -40,6 +42,11 @@ export async function layBaoCaoThietBi(
     );
   if (e2) throw new Error(e2.message);
 
+  const { data: chiPhiList, error: e3 } = await supabase
+    .from("chi_phi")
+    .select("so_tien, don_thue!inner(chang, ngay_bat_dau)");
+  if (e3) throw new Error(e3.message);
+
   type Row = {
     thiet_bi_id: string;
     gia_thue_chot: number;
@@ -54,6 +61,16 @@ export async function layBaoCaoThietBi(
       ? tatCaRows.filter((r) => r.don_thue.ngay_bat_dau >= tuNgay && r.don_thue.ngay_bat_dau <= denNgay)
       : tatCaRows;
   const donHoanTatIds = new Set<string>();
+
+  type ChiPhiRow = { so_tien: number; don_thue: { chang: string; ngay_bat_dau: string } };
+  const tatCaChiPhi = (chiPhiList ?? []) as unknown as ChiPhiRow[];
+  const tongChiPhi = tatCaChiPhi
+    .filter(
+      (c) =>
+        c.don_thue.chang === "xong" &&
+        (!tuNgay || !denNgay || (c.don_thue.ngay_bat_dau >= tuNgay && c.don_thue.ngay_bat_dau <= denNgay))
+    )
+    .reduce((sum, c) => sum + c.so_tien, 0);
 
   const dong: DongBaoCaoThietBi[] = (thietBiList ?? []).map((tb) => {
     const cuaThietBi = rows.filter((r) => r.thiet_bi_id === tb.id && r.don_thue.chang !== "huy");
@@ -85,10 +102,17 @@ export async function layBaoCaoThietBi(
 
   dong.sort((a, b) => b.loiNhuan - a.loiNhuan);
 
+  const tongDoanhThu = dong.reduce((s, d) => s + d.doanhThu, 0);
+  const tongGiaVon = dong.reduce((s, d) => s + d.giaVon, 0);
+
   return {
     dong,
-    tongDoanhThu: dong.reduce((s, d) => s + d.doanhThu, 0),
-    tongLoiNhuan: dong.reduce((s, d) => s + d.loiNhuan, 0),
+    tongDoanhThu,
+    tongGiaVon,
+    tongChiPhi,
+    // Lợi nhuận ròng trừ thêm chi phí phát sinh theo đơn (vận chuyển, bồi thường...) —
+    // khoản này không gắn với riêng thiết bị nào nên không trừ vào loiNhuan từng dòng.
+    tongLoiNhuan: tongDoanhThu - tongGiaVon - tongChiPhi,
     soDonHoanTat: donHoanTatIds.size,
   };
 }

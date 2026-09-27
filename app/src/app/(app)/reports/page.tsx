@@ -39,7 +39,7 @@ export default async function ReportsPage({
     preset = "tuy_chon";
   }
 
-  const { dong, tongDoanhThu, tongLoiNhuan, soDonHoanTat } = await layBaoCaoThietBi(tuNgay, denNgay);
+  const { dong, tongDoanhThu, tongChiPhi, tongLoiNhuan, soDonHoanTat } = await layBaoCaoThietBi(tuNgay, denNgay);
 
   const chuaTungChoThue = dong.filter((d) => d.luotThue === 0);
   const daChoThue = dong.filter((d) => d.luotThue > 0);
@@ -66,10 +66,16 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="kpi-card">
           <div className="kpi-label">Tổng doanh thu (đơn đã xong)</div>
           <div className="kpi-value">{(tongDoanhThu / 1000).toLocaleString("vi-VN")}k</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Chi phí phát sinh</div>
+          <div className="kpi-value" style={{ color: tongChiPhi > 0 ? "#dc2626" : undefined }}>
+            {(tongChiPhi / 1000).toLocaleString("vi-VN")}k
+          </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Tổng lợi nhuận ròng</div>
@@ -106,7 +112,9 @@ export default async function ReportsPage({
         <p className="text-xs text-[var(--text-muted)] mb-3">
           Lọc theo ngày bắt đầu thuê nằm trong khoảng đã chọn ở trên. Doanh thu/lợi nhuận chỉ tính trên đơn đã ở chặng
           &quot;Xong&quot;. Tần suất &amp; số ngày thuê tính trên mọi đơn chưa huỷ (kể cả đang chạy), phản ánh mức độ
-          được chọn thuê thực tế.
+          được chọn thuê thực tế. Cột &quot;Lợi nhuận&quot; theo từng thiết bị là doanh thu trừ giá vốn, chưa trừ chi
+          phí phát sinh (vận chuyển, bồi thường...) vì khoản này ghi theo đơn chứ không theo riêng thiết bị nào — chi
+          phí đó chỉ được trừ vào &quot;Tổng lợi nhuận ròng&quot; ở KPI phía trên.
         </p>
         <div className="table-container" style={{ border: "none", boxShadow: "none" }}>
           <table>
