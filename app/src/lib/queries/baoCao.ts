@@ -66,7 +66,12 @@ export async function layBaoCaoThietBi(
       const soNgay = soNgayThue(r.don_thue.ngay_bat_dau, r.don_thue.ngay_tra_du_kien);
       return sum + thanhTienDong(r, soNgay);
     }, 0);
-    const giaVon = tb.gia_von ? tb.gia_von * daXong.length : 0;
+    const giaVon = tb.gia_von
+      ? daXong.reduce(
+          (sum, r) => sum + tb.gia_von! * soNgayThue(r.don_thue.ngay_bat_dau, r.don_thue.ngay_tra_du_kien),
+          0
+        )
+      : 0;
     const loiNhuan = doanhThu - giaVon;
 
     return {

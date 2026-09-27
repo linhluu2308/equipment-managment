@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { suaThietBi } from "@/lib/actions/thietBi";
-import type { NguonGoc, ThietBi } from "@/lib/types";
+import type { NguonGoc, NhaCungCap, ThietBi } from "@/lib/types";
+import SupplierSelect from "./SupplierSelect";
 
 export default function EditEquipmentModal({
   thietBi,
   giaHienHanh,
+  danhSachNhaCungCap,
   onClose,
 }: {
   thietBi: ThietBi;
   giaHienHanh: number;
+  danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -19,7 +22,7 @@ export default function EditEquipmentModal({
   const [ma, setMa] = useState(thietBi.ma ?? "");
   const [danhMuc, setDanhMuc] = useState(thietBi.danh_muc ?? "");
   const [nguonGoc, setNguonGoc] = useState<NguonGoc>(thietBi.nguon_goc);
-  const [nhaCungCap, setNhaCungCap] = useState(thietBi.nha_cung_cap ?? "");
+  const [nhaCungCapId, setNhaCungCapId] = useState(thietBi.nha_cung_cap_id ?? "");
   const [giaVon, setGiaVon] = useState(thietBi.gia_von != null ? String(thietBi.gia_von) : "");
   const [giaThue, setGiaThue] = useState(String(giaHienHanh));
   const [moTa, setMoTa] = useState(thietBi.mo_ta ?? "");
@@ -30,6 +33,7 @@ export default function EditEquipmentModal({
     e.preventDefault();
     setLoi("");
     if (!ten || !giaThue) return setLoi("Cần nhập tên thiết bị và giá thuê/ngày.");
+    if (nguonGoc === "thue_ngoai" && !nhaCungCapId) return setLoi("Cần chọn nhà cung cấp.");
     setDangGui(true);
     try {
       await suaThietBi(
@@ -39,7 +43,7 @@ export default function EditEquipmentModal({
           ma: ma || undefined,
           danh_muc: danhMuc || undefined,
           nguon_goc: nguonGoc,
-          nha_cung_cap: nhaCungCap || undefined,
+          nha_cung_cap_id: nhaCungCapId || undefined,
           gia_von: giaVon ? Number(giaVon) : undefined,
           gia_thue: Number(giaThue),
           mo_ta: moTa || undefined,
@@ -91,16 +95,11 @@ export default function EditEquipmentModal({
           )}
           {nguonGoc === "thue_ngoai" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                className="input"
-                placeholder="Nhà cung cấp"
-                value={nhaCungCap}
-                onChange={(e) => setNhaCungCap(e.target.value)}
-              />
+              <SupplierSelect danhSach={danhSachNhaCungCap} value={nhaCungCapId} onChange={setNhaCungCapId} />
               <input
                 className="input"
                 type="number"
-                placeholder="Giá vốn (VND)"
+                placeholder="Giá vốn/ngày (VND)"
                 value={giaVon}
                 onChange={(e) => setGiaVon(e.target.value)}
               />

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
+import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type NhaCungCap, type TrangThaiThietBi } from "@/lib/types";
+import { boDau } from "@/lib/text";
 import EquipmentToolbar from "./EquipmentToolbar";
 
 type ThietBiRow = {
@@ -29,17 +30,13 @@ const NGUON_GOC_OPTIONS: { value: string; label: string }[] = [
   { value: "thue_ngoai", label: "Thuê ngoài" },
 ];
 
-const DAU_COMBINING_MARKS = /[̀-ͯ]/g;
-
-function boDau(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(DAU_COMBINING_MARKS, "")
-    .replace(/đ/gi, "d")
-    .toLowerCase();
-}
-
-export default function EquipmentFilters({ thietBiList }: { thietBiList: ThietBiRow[] }) {
+export default function EquipmentFilters({
+  thietBiList,
+  danhSachNhaCungCap,
+}: {
+  thietBiList: ThietBiRow[];
+  danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+}) {
   const [tuKhoa, setTuKhoa] = useState("");
   const [danhMuc, setDanhMuc] = useState("tat_ca");
   const [nguonGoc, setNguonGoc] = useState("tat_ca");
@@ -91,7 +88,7 @@ export default function EquipmentFilters({ thietBiList }: { thietBiList: ThietBi
             ))}
           </select>
         </div>
-        <EquipmentToolbar />
+        <EquipmentToolbar danhSachNhaCungCap={danhSachNhaCungCap} />
       </div>
 
       <div className="table-container">

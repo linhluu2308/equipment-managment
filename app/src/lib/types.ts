@@ -1,4 +1,5 @@
 export type NguonGoc = "so_huu" | "thue_ngoai";
+export type LoaiGiaoDichCongNo = "no_phat_sinh" | "thanh_toan";
 export type TrangThaiThietBi = "san_sang" | "dang_thue" | "bao_tri" | "hong" | "thanh_ly";
 export type ChangDon = "yeu_cau" | "bao_gia" | "da_giao" | "cho_tra" | "xong" | "huy";
 export type LoaiThanhToan = "coc" | "dot" | "tat_toan" | "hoan_coc";
@@ -45,11 +46,31 @@ export interface ThietBi {
   ten: string;
   danh_muc: string | null;
   nguon_goc: NguonGoc;
-  nha_cung_cap: string | null;
+  nha_cung_cap_id: string | null;
   gia_von: number | null;
   mo_ta: string | null;
   anh_url: string | null;
   trang_thai: TrangThaiThietBi;
+  created_at: string;
+}
+
+export interface NhaCungCap {
+  id: string;
+  ten: string;
+  so_dien_thoai: string | null;
+  ghi_chu: string | null;
+  created_at: string;
+}
+
+export interface GiaoDichCongNoNcc {
+  id: string;
+  nha_cung_cap_id: string;
+  loai: LoaiGiaoDichCongNo;
+  so_tien: number;
+  ngay: string;
+  don_thue_id: string | null;
+  thiet_bi_id: string | null;
+  ghi_chu: string | null;
   created_at: string;
 }
 

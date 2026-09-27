@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
-import { khoangNgayGiao } from "@/lib/calculations";
+import { khoangNgayGiao, soNgayThue } from "@/lib/calculations";
 import type { ChangDon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
@@ -164,11 +164,62 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
   if (changMoi === "xong" || changMoi === "huy") {
     await capNhatTrangThaiTheoThietBiTrongDon(donId, "san_sang");
   }
+  if (changMoi === "xong") {
+    await phatSinhCongNoNccChoDon(donId);
+  }
 
   revalidatePath(`/orders/${donId}`);
   revalidatePath("/orders");
   revalidatePath("/");
   revalidatePath("/equipment");
+  revalidatePath("/suppliers");
+}
+
+/**
+ * Khi đơn hoàn tất, tự ghi nợ nhà cung cấp cho từng dòng thiết bị "thuê ngoài"
+ * trong đơn: nợ = gia_von (VND/ngày) × số ngày thuê của đơn. Dùng upsert +
+ * ignoreDuplicates trên unique(don_thue_id, thiet_bi_id) để không ghi trùng
+ * nếu chuyenChangDon() lỡ chạy lại cho cùng 1 đơn.
+ */
+async function phatSinhCongNoNccChoDon(donId: string) {
+  const supabase = await createClient();
+
+  const { data: don, error: eDon } = await supabase
+    .from("don_thue")
+    .select("ngay_bat_dau, ngay_tra_du_kien")
+    .eq("id", donId)
+    .single();
+  if (eDon) throw new Error(eDon.message);
+
+  const { data: chiTiet, error: eChiTiet } = await supabase
+    .from("don_thue_chi_tiet")
+    .select("thiet_bi_id, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)")
+    .eq("don_thue_id", donId);
+  if (eChiTiet) throw new Error(eChiTiet.message);
+
+  const soNgay = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
+  type Dong = { thiet_bi_id: string; thiet_bi: { nguon_goc: string; nha_cung_cap_id: string | null; gia_von: number | null } | null };
+
+  const rows = (chiTiet as unknown as Dong[])
+    .filter((d) => d.thiet_bi?.nguon_goc === "thue_ngoai" && d.thiet_bi.nha_cung_cap_id && d.thiet_bi.gia_von)
+    .map((d) => ({
+      nha_cung_cap_id: d.thiet_bi!.nha_cung_cap_id!,
+      loai: "no_phat_sinh" as const,
+      so_tien: d.thiet_bi!.gia_von! * soNgay,
+      don_thue_id: donId,
+      thiet_bi_id: d.thiet_bi_id,
+    }));
+
+  if (rows.length === 0) return;
+
+  const { error } = await supabase
+    .from("giao_dich_cong_no_ncc")
+    .upsert(rows, { onConflict: "don_thue_id,thiet_bi_id", ignoreDuplicates: true });
+  if (error) {
+    throw new Error(
+      `Đã hoàn tất đơn nhưng ghi công nợ nhà cung cấp thất bại: ${error.message}. Cần kiểm tra lại bằng tay ở trang Nhà cung cấp.`
+    );
+  }
 }
 
 async function capNhatTrangThaiTheoThietBiTrongDon(

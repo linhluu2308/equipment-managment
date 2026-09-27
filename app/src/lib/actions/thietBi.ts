@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
+import { timHoacTaoNhaCungCap } from "@/lib/actions/nhaCungCap";
 import type { NguonGoc, TrangThaiThietBi } from "@/lib/types";
 
 export async function listThietBi() {
@@ -22,7 +23,7 @@ export async function getThietBi(id: string) {
   const supabase = await createClient();
   const [{ data: thietBi, error: e1 }, { data: lichSuGia, error: e2 }, { data: donHang, error: e3 }, { data: kiemTra, error: e4 }] =
     await Promise.all([
-      supabase.from("thiet_bi").select("*").eq("id", id).single(),
+      supabase.from("thiet_bi").select("*, nha_cung_cap(id, ten)").eq("id", id).single(),
       supabase
         .from("lich_su_gia")
         .select("*")
@@ -55,7 +56,7 @@ export interface DauVaoThietBi {
   ten: string;
   danh_muc?: string;
   nguon_goc: NguonGoc;
-  nha_cung_cap?: string;
+  nha_cung_cap_id?: string;
   gia_von?: number;
   mo_ta?: string;
   anh_url?: string;
@@ -74,7 +75,7 @@ export async function createThietBi(input: DauVaoThietBi) {
       ten: input.ten,
       danh_muc: input.danh_muc || null,
       nguon_goc: input.nguon_goc,
-      nha_cung_cap: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap : null,
+      nha_cung_cap_id: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap_id || null : null,
       gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
       mo_ta: input.mo_ta || null,
       anh_url: input.anh_url || null,
@@ -97,7 +98,7 @@ export interface DauVaoSuaThietBi {
   ten: string;
   danh_muc?: string;
   nguon_goc: NguonGoc;
-  nha_cung_cap?: string;
+  nha_cung_cap_id?: string;
   gia_von?: number;
   mo_ta?: string;
   anh_url?: string;
@@ -116,7 +117,7 @@ export async function suaThietBi(id: string, input: DauVaoSuaThietBi, giaHienHan
       ten: input.ten,
       danh_muc: input.danh_muc || null,
       nguon_goc: input.nguon_goc,
-      nha_cung_cap: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap : null,
+      nha_cung_cap_id: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap_id || null : null,
       gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
       mo_ta: input.mo_ta || null,
       anh_url: input.anh_url || null,
@@ -185,6 +186,10 @@ export async function importThietBiHangLoat(rows: DongImportThietBi[]) {
       continue;
     }
     try {
+      const nhaCungCapId =
+        row.nguon_goc === "thue_ngoai" && row.nha_cung_cap?.trim()
+          ? await timHoacTaoNhaCungCap(row.nha_cung_cap)
+          : null;
       const { data: thietBi, error } = await supabase
         .from("thiet_bi")
         .insert({
@@ -192,7 +197,7 @@ export async function importThietBiHangLoat(rows: DongImportThietBi[]) {
           ten: row.ten,
           danh_muc: row.danh_muc || null,
           nguon_goc: row.nguon_goc,
-          nha_cung_cap: row.nguon_goc === "thue_ngoai" ? row.nha_cung_cap : null,
+          nha_cung_cap_id: nhaCungCapId,
           gia_von: row.nguon_goc === "thue_ngoai" ? row.gia_von : null,
         })
         .select()

@@ -4,12 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useVai } from "@/lib/auth-context";
 import { capNhatTrangThaiThietBi, xoaThietBi } from "@/lib/actions/thietBi";
-import { TRANG_THAI_THIET_BI_LABEL, type ThietBi, type TrangThaiThietBi } from "@/lib/types";
+import { TRANG_THAI_THIET_BI_LABEL, type NhaCungCap, type ThietBi, type TrangThaiThietBi } from "@/lib/types";
 import EditEquipmentModal from "./EditEquipmentModal";
 
 const TRANG_THAI_CO_THE_CHON: TrangThaiThietBi[] = ["san_sang", "bao_tri", "hong", "thanh_ly"];
 
-export default function EquipmentActions({ thietBi, giaHienHanh }: { thietBi: ThietBi; giaHienHanh: number }) {
+export default function EquipmentActions({
+  thietBi,
+  giaHienHanh,
+  danhSachNhaCungCap,
+}: {
+  thietBi: ThietBi;
+  giaHienHanh: number;
+  danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+}) {
   const { vai } = useVai();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -64,7 +72,14 @@ export default function EquipmentActions({ thietBi, giaHienHanh }: { thietBi: Th
         lý&quot; thay vì xoá trong trường hợp đó.
       </p>
 
-      {openSua && <EditEquipmentModal thietBi={thietBi} giaHienHanh={giaHienHanh} onClose={() => setOpenSua(false)} />}
+      {openSua && (
+        <EditEquipmentModal
+          thietBi={thietBi}
+          giaHienHanh={giaHienHanh}
+          danhSachNhaCungCap={danhSachNhaCungCap}
+          onClose={() => setOpenSua(false)}
+        />
+      )}
     </section>
   );
 }

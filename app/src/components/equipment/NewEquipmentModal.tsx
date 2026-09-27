@@ -3,15 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createThietBi } from "@/lib/actions/thietBi";
-import type { NguonGoc } from "@/lib/types";
+import type { NguonGoc, NhaCungCap } from "@/lib/types";
+import SupplierSelect from "./SupplierSelect";
 
-export default function NewEquipmentModal({ onClose }: { onClose: () => void }) {
+export default function NewEquipmentModal({
+  danhSachNhaCungCap,
+  onClose,
+}: {
+  danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [ten, setTen] = useState("");
   const [ma, setMa] = useState("");
   const [danhMuc, setDanhMuc] = useState("");
   const [nguonGoc, setNguonGoc] = useState<NguonGoc>("so_huu");
-  const [nhaCungCap, setNhaCungCap] = useState("");
+  const [nhaCungCapId, setNhaCungCapId] = useState("");
   const [giaVon, setGiaVon] = useState("");
   const [giaThue, setGiaThue] = useState("");
   const [moTa, setMoTa] = useState("");
@@ -22,6 +29,7 @@ export default function NewEquipmentModal({ onClose }: { onClose: () => void }) 
     e.preventDefault();
     setLoi("");
     if (!ten || !giaThue) return setLoi("Cần nhập tên thiết bị và giá thuê/ngày.");
+    if (nguonGoc === "thue_ngoai" && !nhaCungCapId) return setLoi("Cần chọn nhà cung cấp.");
     setDangGui(true);
     try {
       await createThietBi({
@@ -29,7 +37,7 @@ export default function NewEquipmentModal({ onClose }: { onClose: () => void }) 
         ma: ma || undefined,
         danh_muc: danhMuc || undefined,
         nguon_goc: nguonGoc,
-        nha_cung_cap: nhaCungCap || undefined,
+        nha_cung_cap_id: nhaCungCapId || undefined,
         gia_von: giaVon ? Number(giaVon) : undefined,
         gia_thue: Number(giaThue),
         mo_ta: moTa || undefined,
@@ -74,16 +82,11 @@ export default function NewEquipmentModal({ onClose }: { onClose: () => void }) 
           </div>
           {nguonGoc === "thue_ngoai" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                className="input"
-                placeholder="Nhà cung cấp"
-                value={nhaCungCap}
-                onChange={(e) => setNhaCungCap(e.target.value)}
-              />
+              <SupplierSelect danhSach={danhSachNhaCungCap} value={nhaCungCapId} onChange={setNhaCungCapId} />
               <input
                 className="input"
                 type="number"
-                placeholder="Giá vốn (VND)"
+                placeholder="Giá vốn/ngày (VND)"
                 value={giaVon}
                 onChange={(e) => setGiaVon(e.target.value)}
               />

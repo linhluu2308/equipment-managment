@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { useVai } from "@/lib/auth-context";
+import type { NhaCungCap } from "@/lib/types";
 import NewEquipmentModal from "./NewEquipmentModal";
 import ImportExcelModal from "./ImportExcelModal";
 
-export default function EquipmentToolbar() {
+export default function EquipmentToolbar({
+  danhSachNhaCungCap,
+}: {
+  danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+}) {
   const { vai } = useVai();
   const [openNew, setOpenNew] = useState(false);
   const [openImport, setOpenImport] = useState(false);
@@ -20,7 +25,7 @@ export default function EquipmentToolbar() {
       <button onClick={() => setOpenNew(true)} className="btn-primary">
         + Thêm thiết bị mới
       </button>
-      {openNew && <NewEquipmentModal onClose={() => setOpenNew(false)} />}
+      {openNew && <NewEquipmentModal danhSachNhaCungCap={danhSachNhaCungCap} onClose={() => setOpenNew(false)} />}
       {openImport && <ImportExcelModal onClose={() => setOpenImport(false)} />}
     </div>
   );

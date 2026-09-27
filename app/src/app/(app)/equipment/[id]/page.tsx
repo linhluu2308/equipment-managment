@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getThietBi } from "@/lib/actions/thietBi";
+import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
 import { soNgayThue, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
 import EquipmentActions from "@/components/equipment/EquipmentActions";
@@ -20,7 +21,10 @@ const TINH_TRANG_BADGE: Record<string, string> = {
 
 export default async function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const data = await getThietBi(id).catch(() => null);
+  const [data, danhSachNhaCungCap] = await Promise.all([
+    getThietBi(id).catch(() => null),
+    layDanhSachNhaCungCap(),
+  ]);
   if (!data || !data.thietBi) notFound();
   const { thietBi, lichSuGia, donHang, kiemTra } = data;
 
@@ -31,7 +35,12 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
     const soNgay = soNgayThue(d.don_thue.ngay_bat_dau, d.don_thue.ngay_tra_du_kien);
     return sum + thanhTienDong(d, soNgay);
   }, 0);
-  const giaVonTong = thietBi.gia_von ? thietBi.gia_von * donXong.length : 0;
+  const giaVonTong = thietBi.gia_von
+    ? donXong.reduce(
+        (sum, d) => sum + thietBi.gia_von! * soNgayThue(d.don_thue.ngay_bat_dau, d.don_thue.ngay_tra_du_kien),
+        0
+      )
+    : 0;
   const loiNhuan = loiNhuanThietBi({ doanhThu, giaVon: giaVonTong, chiPhiKhac: 0 });
 
   return (
@@ -66,7 +75,22 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
               Nguồn gốc
             </div>
-            <div>{thietBi.nguon_goc === "so_huu" ? "Tự sở hữu" : `Thuê ngoài · ${thietBi.nha_cung_cap ?? "—"}`}</div>
+            <div>
+              {thietBi.nguon_goc === "so_huu" ? (
+                "Tự sở hữu"
+              ) : (
+                <>
+                  Thuê ngoài ·{" "}
+                  {thietBi.nha_cung_cap ? (
+                    <Link href={`/suppliers/${thietBi.nha_cung_cap.id}`} className="text-[var(--accent-primary)] hover:underline">
+                      {thietBi.nha_cung_cap.ten}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </>
+              )}
+            </div>
           </div>
           {thietBi.nguon_goc === "thue_ngoai" && (
             <div>
@@ -152,7 +176,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
         </p>
       </section>
 
-      <EquipmentActions thietBi={thietBi} giaHienHanh={giaHienHanh} />
+      <EquipmentActions thietBi={thietBi} giaHienHanh={giaHienHanh} danhSachNhaCungCap={danhSachNhaCungCap} />
     </div>
   );
 }
