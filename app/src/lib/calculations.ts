@@ -1,16 +1,27 @@
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import type { ChiPhi, DonThueChiTiet, KiemTraTinhTrang, ThanhToan } from "./types";
+import type { ChiPhi, DonThue, DonThueChiTiet, KiemTraTinhTrang, ThanhToan } from "./types";
 
 export function soNgayThue(ngayBatDau: string, ngayTraDuKien: string): number {
   return differenceInCalendarDays(parseISO(ngayTraDuKien), parseISO(ngayBatDau)) + 1;
 }
 
 /**
- * Ngày trả dùng để tính tiền: ưu tiên ngày trả thực tế (khách trả sớm/trễ hơn báo
- * giá ban đầu) nếu đã ghi nhận, chưa có thì tạm dùng ngày trả dự kiến.
+ * Ngày trả dùng để tính tiền cho MỘT dòng thiết bị trong đơn: ưu tiên ngày trả
+ * thực tế của riêng thiết bị đó (một đơn có thể chỉ vài thiết bị trả sớm/trễ,
+ * không phải cả đơn) nếu đã ghi nhận, chưa có thì tạm dùng ngày trả dự kiến của đơn.
  */
-export function ngayTraHieuLuc(don: { ngay_tra_du_kien: string; ngay_tra_thuc_te?: string | null }): string {
-  return don.ngay_tra_thuc_te || don.ngay_tra_du_kien;
+export function ngayTraHieuLucDong(
+  don: Pick<DonThue, "ngay_tra_du_kien">,
+  line: Pick<DonThueChiTiet, "ngay_tra_thuc_te">
+): string {
+  return line.ngay_tra_thuc_te || don.ngay_tra_du_kien;
+}
+
+export function soNgayThueDong(
+  don: Pick<DonThue, "ngay_bat_dau" | "ngay_tra_du_kien">,
+  line: Pick<DonThueChiTiet, "ngay_tra_thuc_te">
+): number {
+  return soNgayThue(don.ngay_bat_dau, ngayTraHieuLucDong(don, line));
 }
 
 export function thanhTienDong(
@@ -23,10 +34,10 @@ export function thanhTienDong(
 
 export function tongTienDon(
   lines: DonThueChiTiet[],
-  soNgay: number,
+  don: Pick<DonThue, "ngay_bat_dau" | "ngay_tra_du_kien">,
   chiPhiList: ChiPhi[] = []
 ): number {
-  const tienThietBi = lines.reduce((sum, l) => sum + thanhTienDong(l, soNgay), 0);
+  const tienThietBi = lines.reduce((sum, l) => sum + thanhTienDong(l, soNgayThueDong(don, l)), 0);
   const tongChiPhi = chiPhiList.reduce((sum, c) => sum + c.so_tien, 0);
   return tienThietBi + tongChiPhi;
 }
@@ -40,11 +51,11 @@ export function tongDaThu(thanhToanList: ThanhToan[]): number {
 
 export function congNoConLai(
   lines: DonThueChiTiet[],
-  soNgay: number,
+  don: Pick<DonThue, "ngay_bat_dau" | "ngay_tra_du_kien">,
   chiPhiList: ChiPhi[],
   thanhToanList: ThanhToan[]
 ): number {
-  return tongTienDon(lines, soNgay, chiPhiList) - tongDaThu(thanhToanList);
+  return tongTienDon(lines, don, chiPhiList) - tongDaThu(thanhToanList);
 }
 
 export function kiemTraDaDayDu(

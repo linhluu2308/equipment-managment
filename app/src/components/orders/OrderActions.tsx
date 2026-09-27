@@ -3,14 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { chuyenChangDon } from "@/lib/actions/donThue";
-import { soNgayThue } from "@/lib/calculations";
 import { ghiThanhToan } from "@/lib/actions/thanhToan";
 import { ghiChiPhi } from "@/lib/actions/chiPhi";
 import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
 import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
+import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
 import type { ChangDon, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
 
-type DonChiTiet = { id: string; thiet_bi_id: string; thiet_bi: { ten: string } | null };
+type DonChiTiet = {
+  id: string;
+  thiet_bi_id: string;
+  ngay_tra_thuc_te: string | null;
+  thiet_bi: { ten: string } | null;
+};
 type DonForActions = {
   id: string;
   chang: ChangDon;
@@ -24,13 +29,12 @@ export default function OrderActions({ don }: { don: DonForActions }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [loi, setLoi] = useState("");
-  const [ngayTraThucTe, setNgayTraThucTe] = useState(don.ngay_tra_du_kien);
 
-  function chuyenChang(changMoi: ChangDon, ngayTraThucTeParam?: string) {
+  function chuyenChang(changMoi: ChangDon) {
     setLoi("");
     start(async () => {
       try {
-        await chuyenChangDon(don.id, changMoi, ngayTraThucTeParam);
+        await chuyenChangDon(don.id, changMoi);
         router.refresh();
       } catch (err) {
         setLoi((err as Error).message);
@@ -73,33 +77,12 @@ export default function OrderActions({ don }: { don: DonForActions }) {
             Nhận thiết bị về kho
           </ActionButton>
         )}
-      </div>
-
-      {don.chang === "cho_tra" && (
-        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-              Ngày trả thực tế
-            </label>
-            <input
-              className="input"
-              type="date"
-              min={don.ngay_bat_dau}
-              value={ngayTraThucTe}
-              onChange={(e) => setNgayTraThucTe(e.target.value)}
-            />
-          </div>
-          <ActionButton onClick={() => chuyenChang("xong", ngayTraThucTe)} pending={pending}>
+        {don.chang === "cho_tra" && (
+          <ActionButton onClick={() => chuyenChang("xong")} pending={pending}>
             Chốt công nợ & Hoàn tất
           </ActionButton>
-          {ngayTraThucTe !== don.ngay_tra_du_kien && (
-            <p className="w-full text-xs text-[var(--text-muted)]">
-              Khác ngày dự kiến ({don.ngay_tra_du_kien}) — doanh thu, giá vốn và công nợ nhà cung cấp sẽ tính theo{" "}
-              {soNgayThue(don.ngay_bat_dau, ngayTraThucTe)} ngày thuê thực tế.
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {don.chang !== "yeu_cau" && (
         <div className="grid gap-4 border-t border-[var(--border-color)] pt-4 md:grid-cols-2">
@@ -107,7 +90,10 @@ export default function OrderActions({ don }: { don: DonForActions }) {
           <ChiPhiForm donId={don.id} />
           <CocGiayToForm donId={don.id} cocList={don.coc_giay_to} />
           {(don.chang === "da_giao" || don.chang === "cho_tra") && (
-            <KiemTraForm donId={don.id} chiTiet={don.don_thue_chi_tiet} />
+            <>
+              <NgayTraThucTeForm donId={don.id} ngayBatDau={don.ngay_bat_dau} ngayTraDuKien={don.ngay_tra_du_kien} chiTiet={don.don_thue_chi_tiet} />
+              <KiemTraForm donId={don.id} chiTiet={don.don_thue_chi_tiet} />
+            </>
           )}
         </div>
       )}
@@ -280,6 +266,104 @@ function CocGiayToForm({
         </div>
       )}
     </form>
+  );
+}
+
+function NgayTraThucTeForm({
+  donId,
+  ngayBatDau,
+  ngayTraDuKien,
+  chiTiet,
+}: {
+  donId: string;
+  ngayBatDau: string;
+  ngayTraDuKien: string;
+  chiTiet: DonChiTiet[];
+}) {
+  const router = useRouter();
+  const [ngayApDungTatCa, setNgayApDungTatCa] = useState(ngayTraDuKien);
+  const [pendingTatCa, startTatCa] = useTransition();
+  const [loi, setLoi] = useState("");
+
+  function apDungTatCa() {
+    setLoi("");
+    startTatCa(async () => {
+      try {
+        await apDungNgayTraThucTeChoTatCa(donId, ngayApDungTatCa);
+        router.refresh();
+      } catch (err) {
+        setLoi((err as Error).message);
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5 md:col-span-2">
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+        Ngày trả thực tế (mặc định theo ngày trả dự kiến {ngayTraDuKien} — chỉnh nếu thiết bị trả sớm/trễ hơn)
+      </h3>
+      {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
+
+      <div className="flex flex-wrap items-end gap-2">
+        <input
+          className="input !w-auto"
+          type="date"
+          min={ngayBatDau}
+          value={ngayApDungTatCa}
+          onChange={(e) => setNgayApDungTatCa(e.target.value)}
+        />
+        <button type="button" disabled={pendingTatCa} className="btn-secondary" onClick={apDungTatCa}>
+          {pendingTatCa ? "Đang lưu..." : "Áp dụng cho tất cả thiết bị"}
+        </button>
+      </div>
+
+      <ul className="divide-y divide-[var(--border-color)] text-sm">
+        {chiTiet.map((l) => (
+          <NgayTraThucTeDong key={l.thiet_bi_id} donId={donId} ngayBatDau={ngayBatDau} line={l} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function NgayTraThucTeDong({
+  donId,
+  ngayBatDau,
+  line,
+}: {
+  donId: string;
+  ngayBatDau: string;
+  line: DonChiTiet;
+}) {
+  const router = useRouter();
+  const [ngay, setNgay] = useState(line.ngay_tra_thuc_te ?? "");
+  const [pending, start] = useTransition();
+  const [loi, setLoi] = useState("");
+
+  function luu() {
+    if (!ngay) return;
+    setLoi("");
+    start(async () => {
+      try {
+        await capNhatNgayTraThucTeDong(donId, line.thiet_bi_id, ngay);
+        router.refresh();
+      } catch (err) {
+        setLoi((err as Error).message);
+      }
+    });
+  }
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+      <span>{line.thiet_bi?.ten}</span>
+      <span className="flex items-center gap-1.5">
+        <input className="input !w-auto !py-1" type="date" min={ngayBatDau} value={ngay} onChange={(e) => setNgay(e.target.value)} />
+        <button type="button" disabled={pending || !ngay} className="btn-secondary !py-1" onClick={luu}>
+          {pending ? "..." : "Lưu"}
+        </button>
+        {loi && <span className="badge badge-danger">{loi}</span>}
+      </span>
+    </li>
   );
 }
 

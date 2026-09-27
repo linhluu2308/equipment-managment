@@ -97,7 +97,6 @@ export interface DonThue {
   chang: ChangDon;
   ngay_bat_dau: string;
   ngay_tra_du_kien: string;
-  ngay_tra_thuc_te: string | null;
   ghi_chu: string | null;
   created_at: string;
   updated_at: string;
@@ -109,6 +108,7 @@ export interface DonThueChiTiet {
   thiet_bi_id: string;
   gia_thue_chot: number;
   phan_tram_chiet_khau: number;
+  ngay_tra_thuc_te: string | null;
   created_at: string;
 }
 

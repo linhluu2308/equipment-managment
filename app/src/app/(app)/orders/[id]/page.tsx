@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDonThue } from "@/lib/actions/donThue";
 import { CHANG_LABEL, type DonThueDetail } from "@/lib/types";
-import { ngayTraHieuLuc, soNgayThue, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { soNgayThue, soNgayThueDong, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
@@ -15,10 +15,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   if (!donRaw) notFound();
   const don = donRaw as unknown as DonThueDetail;
 
-  const soNgay = soNgayThue(don.ngay_bat_dau, ngayTraHieuLuc(don));
-  const tong = tongTienDon(don.don_thue_chi_tiet, soNgay, don.chi_phi);
+  const soNgayDuKien = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
+  const tong = tongTienDon(don.don_thue_chi_tiet, don, don.chi_phi);
   const daThu = tongDaThu(don.thanh_toan);
   const congNo = tong - daThu;
+  const soThietBiTraKhacNgay = don.don_thue_chi_tiet.filter(
+    (l) => l.ngay_tra_thuc_te && l.ngay_tra_thuc_te !== don.ngay_tra_du_kien
+  ).length;
 
   return (
     <div className="max-w-4xl w-full space-y-5">
@@ -59,9 +62,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <Field
             label="Dải ngày thuê"
             value={
-              don.ngay_tra_thuc_te
-                ? `${don.ngay_bat_dau} → ${don.ngay_tra_thuc_te} thực tế (dự kiến ${don.ngay_tra_du_kien}) · ${soNgay} ngày`
-                : `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} dự kiến (${soNgay} ngày)`
+              soThietBiTraKhacNgay > 0
+                ? `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} dự kiến (${soNgayDuKien} ngày) · ${soThietBiTraKhacNgay}/${don.don_thue_chi_tiet.length} thiết bị trả khác ngày — xem chi tiết bên dưới`
+                : `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} dự kiến (${soNgayDuKien} ngày)`
             }
           />
         </div>
@@ -76,26 +79,41 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <tr>
                 <th>Thiết bị</th>
                 <th>Đơn giá/ngày</th>
+                <th>Ngày trả</th>
+                <th>Số ngày</th>
                 <th>Chiết khấu</th>
                 <th>Thành tiền</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {don.don_thue_chi_tiet.map((l) => (
-                <tr key={l.id}>
-                  <td>
-                    <span className="font-semibold">{l.thiet_bi?.ten}</span>{" "}
-                    {l.thiet_bi?.ma && <span className="text-[var(--text-muted)] font-mono text-xs">· {l.thiet_bi.ma}</span>}
-                  </td>
-                  <td>{l.gia_thue_chot.toLocaleString("vi-VN")}đ</td>
-                  <td>{l.phan_tram_chiet_khau}%</td>
-                  <td className="font-semibold">{thanhTienDong(l, soNgay).toLocaleString("vi-VN")}đ</td>
-                  <td className="text-right">
-                    {don.chang === "yeu_cau" && <RemoveLineButton chiTietId={l.id} donId={don.id} />}
-                  </td>
-                </tr>
-              ))}
+              {don.don_thue_chi_tiet.map((l) => {
+                const soNgayDong = soNgayThueDong(don, l);
+                return (
+                  <tr key={l.id}>
+                    <td>
+                      <span className="font-semibold">{l.thiet_bi?.ten}</span>{" "}
+                      {l.thiet_bi?.ma && <span className="text-[var(--text-muted)] font-mono text-xs">· {l.thiet_bi.ma}</span>}
+                    </td>
+                    <td>{l.gia_thue_chot.toLocaleString("vi-VN")}đ</td>
+                    <td>
+                      {l.ngay_tra_thuc_te ? (
+                        <span title="Ngày trả thực tế">{l.ngay_tra_thuc_te}</span>
+                      ) : (
+                        <span className="text-[var(--text-muted)]" title="Chưa ghi ngày trả thực tế, tạm dùng ngày dự kiến">
+                          {don.ngay_tra_du_kien} (dự kiến)
+                        </span>
+                      )}
+                    </td>
+                    <td>{soNgayDong}</td>
+                    <td>{l.phan_tram_chiet_khau}%</td>
+                    <td className="font-semibold">{thanhTienDong(l, soNgayDong).toLocaleString("vi-VN")}đ</td>
+                    <td className="text-right">
+                      {don.chang === "yeu_cau" && <RemoveLineButton chiTietId={l.id} donId={don.id} />}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

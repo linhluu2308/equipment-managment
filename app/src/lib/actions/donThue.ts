@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
-import { khoangNgayGiao, ngayTraHieuLuc, soNgayThue } from "@/lib/calculations";
+import { khoangNgayGiao, soNgayThueDong } from "@/lib/calculations";
 import type { ChangDon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
@@ -109,6 +109,54 @@ export async function xoaThietBiKhoiDon(chiTietId: string, donId: string) {
   revalidatePath(`/orders/${donId}`);
 }
 
+/**
+ * Ghi ngày trả thực tế cho MỘT thiết bị trong đơn — dùng khi chỉ vài thiết bị
+ * trả sớm/trễ hơn báo giá, không phải cả đơn. Sửa được trong lúc đơn đang ở
+ * chặng "Đã giao"/"Chờ trả" (trước khi chốt "Xong"), giống lúc ghi biên bản
+ * kiểm tra tình trạng khi trả.
+ */
+export async function capNhatNgayTraThucTeDong(donId: string, thietBiId: string, ngay: string) {
+  const supabase = await createClient();
+  const { data: don, error: eDon } = await supabase
+    .from("don_thue")
+    .select("ngay_bat_dau")
+    .eq("id", donId)
+    .single();
+  if (eDon) throw new Error(eDon.message);
+  if (ngay < don.ngay_bat_dau) {
+    throw new Error("Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.");
+  }
+
+  const { error } = await supabase
+    .from("don_thue_chi_tiet")
+    .update({ ngay_tra_thuc_te: ngay })
+    .eq("don_thue_id", donId)
+    .eq("thiet_bi_id", thietBiId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/orders/${donId}`);
+}
+
+/**
+ * Áp dụng cùng 1 ngày trả thực tế cho TẤT CẢ thiết bị trong đơn — tiện cho
+ * trường hợp cả đơn trả cùng lúc, đỡ phải nhập từng dòng.
+ */
+export async function apDungNgayTraThucTeChoTatCa(donId: string, ngay: string) {
+  const supabase = await createClient();
+  const { data: don, error: eDon } = await supabase
+    .from("don_thue")
+    .select("ngay_bat_dau")
+    .eq("id", donId)
+    .single();
+  if (eDon) throw new Error(eDon.message);
+  if (ngay < don.ngay_bat_dau) {
+    throw new Error("Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.");
+  }
+
+  const { error } = await supabase.from("don_thue_chi_tiet").update({ ngay_tra_thuc_te: ngay }).eq("don_thue_id", donId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/orders/${donId}`);
+}
+
 const CHUYEN_TIEP: Record<ChangDon, ChangDon[]> = {
   yeu_cau: ["bao_gia", "huy"],
   bao_gia: ["da_giao", "huy"],
@@ -118,7 +166,7 @@ const CHUYEN_TIEP: Record<ChangDon, ChangDon[]> = {
   huy: [],
 };
 
-export async function chuyenChangDon(donId: string, changMoi: ChangDon, ngayTraThucTe?: string) {
+export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
   const supabase = await createClient();
   const { data: don, error: eGet } = await supabase
     .from("don_thue")
@@ -143,17 +191,11 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon, ngayTraT
     if (thieu.length > 0) {
       throw new Error("Chưa kiểm tra tình trạng đầy đủ cho tất cả thiết bị trong đơn.");
     }
-    if (ngayTraThucTe && ngayTraThucTe < don.ngay_bat_dau) {
-      throw new Error("Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.");
-    }
   }
 
   const { data: updated, error } = await supabase
     .from("don_thue")
-    .update({
-      chang: changMoi,
-      ...(changMoi === "xong" ? { ngay_tra_thuc_te: ngayTraThucTe || don.ngay_tra_du_kien } : {}),
-    })
+    .update({ chang: changMoi })
     .eq("id", donId)
     .eq("chang", don.chang) // chỉ ghi nếu chặng vẫn đúng như lúc vừa đọc ở trên
     .select("id");
@@ -183,35 +225,40 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon, ngayTraT
 
 /**
  * Khi đơn hoàn tất, tự ghi nợ nhà cung cấp cho từng dòng thiết bị "thuê ngoài"
- * trong đơn: nợ = gia_von (VND/ngày) × số ngày thuê của đơn. Dùng upsert +
- * ignoreDuplicates trên unique(don_thue_id, thiet_bi_id) để không ghi trùng
- * nếu chuyenChangDon() lỡ chạy lại cho cùng 1 đơn.
+ * trong đơn: nợ = gia_von (VND/ngày) × số ngày thuê THỰC TẾ của riêng thiết bị
+ * đó (ngay_tra_thuc_te trên chính dòng chi tiết, nếu chưa ghi thì tạm dùng ngày
+ * trả dự kiến của đơn) — mỗi thiết bị trong đơn có thể trả khác ngày nhau. Dùng
+ * upsert + ignoreDuplicates trên unique(don_thue_id, thiet_bi_id) để không ghi
+ * trùng nếu chuyenChangDon() lỡ chạy lại cho cùng 1 đơn.
  */
 async function phatSinhCongNoNccChoDon(donId: string) {
   const supabase = await createClient();
 
   const { data: don, error: eDon } = await supabase
     .from("don_thue")
-    .select("ngay_bat_dau, ngay_tra_du_kien, ngay_tra_thuc_te")
+    .select("ngay_bat_dau, ngay_tra_du_kien")
     .eq("id", donId)
     .single();
   if (eDon) throw new Error(eDon.message);
 
   const { data: chiTiet, error: eChiTiet } = await supabase
     .from("don_thue_chi_tiet")
-    .select("thiet_bi_id, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)")
+    .select("thiet_bi_id, ngay_tra_thuc_te, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)")
     .eq("don_thue_id", donId);
   if (eChiTiet) throw new Error(eChiTiet.message);
 
-  const soNgay = soNgayThue(don.ngay_bat_dau, ngayTraHieuLuc(don));
-  type Dong = { thiet_bi_id: string; thiet_bi: { nguon_goc: string; nha_cung_cap_id: string | null; gia_von: number | null } | null };
+  type Dong = {
+    thiet_bi_id: string;
+    ngay_tra_thuc_te: string | null;
+    thiet_bi: { nguon_goc: string; nha_cung_cap_id: string | null; gia_von: number | null } | null;
+  };
 
   const rows = (chiTiet as unknown as Dong[])
     .filter((d) => d.thiet_bi?.nguon_goc === "thue_ngoai" && d.thiet_bi.nha_cung_cap_id && d.thiet_bi.gia_von)
     .map((d) => ({
       nha_cung_cap_id: d.thiet_bi!.nha_cung_cap_id!,
       loai: "no_phat_sinh" as const,
-      so_tien: d.thiet_bi!.gia_von! * soNgay,
+      so_tien: d.thiet_bi!.gia_von! * soNgayThueDong(don, d),
       don_thue_id: donId,
       thiet_bi_id: d.thiet_bi_id,
     }));
