@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type NhaCungCap, type TrangThaiThietBi } from "@/lib/types";
+import {
+  DANH_MUC_THIET_BI,
+  TRANG_THAI_THIET_BI_BADGE,
+  TRANG_THAI_THIET_BI_LABEL,
+  type NhaCungCap,
+  type TrangThaiThietBi,
+} from "@/lib/types";
 import { boDau } from "@/lib/text";
 import EquipmentToolbar from "./EquipmentToolbar";
 
@@ -11,18 +17,13 @@ type ThietBiRow = {
   ma: string | null;
   ten: string;
   danh_muc: string | null;
+  hang: string | null;
   gia_hien_hanh: number;
   nguon_goc: string;
   trang_thai: string;
 };
 
-const DANH_MUC_OPTIONS: { value: string; label: string; tuKhoa: string[] }[] = [
-  { value: "tat_ca", label: "Toàn bộ thiết bị", tuKhoa: [] },
-  { value: "lens", label: "Ống kính (Lens)", tuKhoa: ["ong kinh", "lens"] },
-  { value: "body", label: "Body máy quay", tuKhoa: ["body", "may quay", "than may"] },
-  { value: "den", label: "Đèn & Ánh sáng", tuKhoa: ["den", "anh sang", "light"] },
-  { value: "grip", label: "Grip & Phụ kiện", tuKhoa: ["grip", "phu kien", "accessory"] },
-];
+const DANH_MUC_OPTIONS = ["tat_ca", ...DANH_MUC_THIET_BI];
 
 const NGUON_GOC_OPTIONS: { value: string; label: string }[] = [
   { value: "tat_ca", label: "Tất cả nguồn gốc" },
@@ -33,9 +34,11 @@ const NGUON_GOC_OPTIONS: { value: string; label: string }[] = [
 export default function EquipmentFilters({
   thietBiList,
   danhSachNhaCungCap,
+  goiYHang,
 }: {
   thietBiList: ThietBiRow[];
   danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+  goiYHang: Record<string, string[]>;
 }) {
   const [tuKhoa, setTuKhoa] = useState("");
   const [danhMuc, setDanhMuc] = useState("tat_ca");
@@ -43,7 +46,6 @@ export default function EquipmentFilters({
 
   const filtered = useMemo(() => {
     const tuKhoaChuan = boDau(tuKhoa.trim());
-    const tuyChonDanhMuc = DANH_MUC_OPTIONS.find((d) => d.value === danhMuc);
 
     return thietBiList.filter((tb) => {
       const khopTuKhoa =
@@ -51,10 +53,7 @@ export default function EquipmentFilters({
         boDau(tb.ten).includes(tuKhoaChuan) ||
         boDau(tb.ma ?? "").includes(tuKhoaChuan);
 
-      const danhMucChuan = boDau(tb.danh_muc ?? "");
-      const khopDanhMuc =
-        danhMuc === "tat_ca" ||
-        (tuyChonDanhMuc?.tuKhoa.some((k) => danhMucChuan.includes(k)) ?? false);
+      const khopDanhMuc = danhMuc === "tat_ca" || tb.danh_muc === danhMuc;
 
       const khopNguonGoc = nguonGoc === "tat_ca" || tb.nguon_goc === nguonGoc;
 
@@ -75,8 +74,8 @@ export default function EquipmentFilters({
           />
           <select className="input sm:!w-56" value={danhMuc} onChange={(e) => setDanhMuc(e.target.value)}>
             {DANH_MUC_OPTIONS.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
+              <option key={d} value={d}>
+                {d === "tat_ca" ? "Toàn bộ danh mục" : d}
               </option>
             ))}
           </select>
@@ -88,7 +87,7 @@ export default function EquipmentFilters({
             ))}
           </select>
         </div>
-        <EquipmentToolbar danhSachNhaCungCap={danhSachNhaCungCap} />
+        <EquipmentToolbar danhSachNhaCungCap={danhSachNhaCungCap} goiYHang={goiYHang} />
       </div>
 
       <div className="table-container">
@@ -112,7 +111,10 @@ export default function EquipmentFilters({
                     {tb.ten}
                   </Link>
                 </td>
-                <td>{tb.danh_muc || "—"}</td>
+                <td>
+                  {tb.danh_muc || "—"}
+                  {tb.hang && <span className="text-[var(--text-muted)]"> · {tb.hang}</span>}
+                </td>
                 <td>{tb.gia_hien_hanh.toLocaleString("vi-VN")}đ</td>
                 <td>{tb.nguon_goc === "so_huu" ? "Tự sở hữu" : "Thuê ngoài"}</td>
                 <td>

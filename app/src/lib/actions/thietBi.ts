@@ -19,6 +19,24 @@ export async function listThietBi() {
   }));
 }
 
+/**
+ * Gợi ý "hãng" theo từng danh mục cho ô nhập ở form Thêm/Sửa thiết bị — lấy từ
+ * mọi giá trị hang đã từng nhập trước đó, nhóm theo danh_muc, để mỗi hãng mới
+ * gõ vào lần này tự động thành gợi ý cho lần sau (không cần bảng riêng).
+ */
+export async function layGoiYHangTheoDanhMuc(): Promise<Record<string, string[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("thiet_bi").select("danh_muc, hang").not("hang", "is", null);
+  if (error) throw new Error(error.message);
+
+  const map: Record<string, Set<string>> = {};
+  for (const row of data ?? []) {
+    if (!row.danh_muc || !row.hang) continue;
+    (map[row.danh_muc] ??= new Set()).add(row.hang);
+  }
+  return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, [...v].sort()]));
+}
+
 export async function getThietBi(id: string) {
   const supabase = await createClient();
   const [{ data: thietBi, error: e1 }, { data: lichSuGia, error: e2 }, { data: donHang, error: e3 }, { data: kiemTra, error: e4 }] =
@@ -55,6 +73,7 @@ export interface DauVaoThietBi {
   ma?: string;
   ten: string;
   danh_muc?: string;
+  hang?: string;
   nguon_goc: NguonGoc;
   nha_cung_cap_id?: string;
   gia_von?: number;
@@ -74,6 +93,7 @@ export async function createThietBi(input: DauVaoThietBi) {
       ma: input.ma || null,
       ten: input.ten,
       danh_muc: input.danh_muc || null,
+      hang: input.hang || null,
       nguon_goc: input.nguon_goc,
       nha_cung_cap_id: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap_id || null : null,
       gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
@@ -97,6 +117,7 @@ export interface DauVaoSuaThietBi {
   ma?: string;
   ten: string;
   danh_muc?: string;
+  hang?: string;
   nguon_goc: NguonGoc;
   nha_cung_cap_id?: string;
   gia_von?: number;
@@ -116,6 +137,7 @@ export async function suaThietBi(id: string, input: DauVaoSuaThietBi, giaHienHan
       ma: input.ma || null,
       ten: input.ten,
       danh_muc: input.danh_muc || null,
+      hang: input.hang || null,
       nguon_goc: input.nguon_goc,
       nha_cung_cap_id: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap_id || null : null,
       gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
@@ -165,6 +187,7 @@ export interface DongImportThietBi {
   ma?: string;
   ten: string;
   danh_muc?: string;
+  hang?: string;
   nguon_goc: NguonGoc;
   nha_cung_cap?: string;
   gia_von?: number;
@@ -196,6 +219,7 @@ export async function importThietBiHangLoat(rows: DongImportThietBi[]) {
           ma: row.ma || null,
           ten: row.ten,
           danh_muc: row.danh_muc || null,
+          hang: row.hang || null,
           nguon_goc: row.nguon_goc,
           nha_cung_cap_id: nhaCungCapId,
           gia_von: row.nguon_goc === "thue_ngoai" ? row.gia_von : null,

@@ -8,8 +8,10 @@ import ImportExcelModal from "./ImportExcelModal";
 
 export default function EquipmentToolbar({
   danhSachNhaCungCap,
+  goiYHang,
 }: {
   danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+  goiYHang: Record<string, string[]>;
 }) {
   const { vai } = useVai();
   const [openNew, setOpenNew] = useState(false);
@@ -25,7 +27,9 @@ export default function EquipmentToolbar({
       <button onClick={() => setOpenNew(true)} className="btn-primary">
         + Thêm thiết bị mới
       </button>
-      {openNew && <NewEquipmentModal danhSachNhaCungCap={danhSachNhaCungCap} onClose={() => setOpenNew(false)} />}
+      {openNew && (
+        <NewEquipmentModal danhSachNhaCungCap={danhSachNhaCungCap} goiYHang={goiYHang} onClose={() => setOpenNew(false)} />
+      )}
       {openImport && <ImportExcelModal onClose={() => setOpenImport(false)} />}
     </div>
   );

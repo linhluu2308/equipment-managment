@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getThietBi } from "@/lib/actions/thietBi";
+import { getThietBi, layGoiYHangTheoDanhMuc } from "@/lib/actions/thietBi";
 import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
 import { soNgayThueDong, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
@@ -21,9 +21,10 @@ const TINH_TRANG_BADGE: Record<string, string> = {
 
 export default async function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, danhSachNhaCungCap] = await Promise.all([
+  const [data, danhSachNhaCungCap, goiYHang] = await Promise.all([
     getThietBi(id).catch(() => null),
     layDanhSachNhaCungCap(),
+    layGoiYHangTheoDanhMuc(),
   ]);
   if (!data || !data.thietBi) notFound();
   const { thietBi, lichSuGia, donHang, kiemTra } = data;
@@ -49,6 +50,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
           <p className="text-sm text-[var(--text-muted)] font-mono">
             {thietBi.ma && `${thietBi.ma} · `}
             {thietBi.danh_muc || "Chưa phân loại"}
+            {thietBi.hang && ` · ${thietBi.hang}`}
           </p>
         </div>
         <span className={`badge ${TRANG_THAI_THIET_BI_BADGE[thietBi.trang_thai as TrangThaiThietBi]}`}>
@@ -170,7 +172,12 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
         </p>
       </section>
 
-      <EquipmentActions thietBi={thietBi} giaHienHanh={giaHienHanh} danhSachNhaCungCap={danhSachNhaCungCap} />
+      <EquipmentActions
+        thietBi={thietBi}
+        giaHienHanh={giaHienHanh}
+        danhSachNhaCungCap={danhSachNhaCungCap}
+        goiYHang={goiYHang}
+      />
     </div>
   );
 }

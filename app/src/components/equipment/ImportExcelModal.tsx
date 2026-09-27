@@ -16,6 +16,8 @@ const HEADER_MAP: Record<string, keyof DongImportThietBi> = {
   "mã/serial": "ma",
   danh_muc: "danh_muc",
   "danh mục": "danh_muc",
+  hang: "hang",
+  "hãng": "hang",
   nguon_goc: "nguon_goc",
   "nguồn gốc": "nguon_goc",
   nha_cung_cap: "nha_cung_cap",
@@ -64,6 +66,7 @@ function parseSheet(file: File): Promise<PreviewRow[]> {
             ten,
             ma: mapped.ma,
             danh_muc: mapped.danh_muc,
+            hang: mapped.hang,
             nguon_goc: mapped.nguon_goc ?? "so_huu",
             nha_cung_cap: mapped.nha_cung_cap,
             gia_von: mapped.gia_von,
@@ -84,9 +87,9 @@ function parseSheet(file: File): Promise<PreviewRow[]> {
 function taiFileMau() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ["ten", "ma", "danh_muc", "nguon_goc", "nha_cung_cap", "gia_von", "gia_thue"],
-    ["Sony FX6", "FX6-01", "Body", "so_huu", "", "", "1500000"],
-    ["Ống kính 70-200mm", "LENS-70200", "Lens", "thue_ngoai", "Studio ABC", "300000", "500000"],
+    ["ten", "ma", "danh_muc", "hang", "nguon_goc", "nha_cung_cap", "gia_von", "gia_thue"],
+    ["Sony FX6", "FX6-01", "Camera", "Sony", "so_huu", "", "", "1500000"],
+    ["Ống kính 70-200mm", "LENS-70200", "Lens", "Sony", "thue_ngoai", "Studio ABC", "300000", "500000"],
   ]);
   XLSX.utils.book_append_sheet(wb, ws, "Mau");
   XLSX.writeFile(wb, "cineb-mau-import-thiet-bi.xlsx");

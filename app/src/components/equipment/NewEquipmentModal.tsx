@@ -5,18 +5,22 @@ import { useRouter } from "next/navigation";
 import { createThietBi } from "@/lib/actions/thietBi";
 import type { NguonGoc, NhaCungCap } from "@/lib/types";
 import SupplierSelect from "./SupplierSelect";
+import CategoryBrandFields from "./CategoryBrandFields";
 
 export default function NewEquipmentModal({
   danhSachNhaCungCap,
+  goiYHang,
   onClose,
 }: {
   danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+  goiYHang: Record<string, string[]>;
   onClose: () => void;
 }) {
   const router = useRouter();
   const [ten, setTen] = useState("");
   const [ma, setMa] = useState("");
   const [danhMuc, setDanhMuc] = useState("");
+  const [hang, setHang] = useState("");
   const [nguonGoc, setNguonGoc] = useState<NguonGoc>("so_huu");
   const [nhaCungCapId, setNhaCungCapId] = useState("");
   const [giaVon, setGiaVon] = useState("");
@@ -36,6 +40,7 @@ export default function NewEquipmentModal({
         ten,
         ma: ma || undefined,
         danh_muc: danhMuc || undefined,
+        hang: hang || undefined,
         nguon_goc: nguonGoc,
         nha_cung_cap_id: nhaCungCapId || undefined,
         gia_von: giaVon ? Number(giaVon) : undefined,
@@ -66,7 +71,7 @@ export default function NewEquipmentModal({
             <input className="input" placeholder="Tên thiết bị" value={ten} onChange={(e) => setTen(e.target.value)} />
             <input className="input" placeholder="Mã/Serial" value={ma} onChange={(e) => setMa(e.target.value)} />
           </div>
-          <input className="input" placeholder="Danh mục (Body, Lens, Đèn...)" value={danhMuc} onChange={(e) => setDanhMuc(e.target.value)} />
+          <CategoryBrandFields danhMuc={danhMuc} onDanhMucChange={setDanhMuc} hang={hang} onHangChange={setHang} goiYHang={goiYHang} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select className="input" value={nguonGoc} onChange={(e) => setNguonGoc(e.target.value as NguonGoc)}>
               <option value="so_huu">Tự sở hữu</option>

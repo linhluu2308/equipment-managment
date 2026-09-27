@@ -6,6 +6,9 @@ export type LoaiThanhToan = "coc" | "dot" | "tat_toan" | "hoan_coc";
 export type TrangThaiGiayTo = "dang_giu" | "da_hoan_tra";
 export type TinhTrangThietBi = "tot" | "tray_xuoc" | "hong";
 
+export const DANH_MUC_THIET_BI = ["Camera", "Lens", "Lighting", "Accessories", "Crane & Grip"] as const;
+export type DanhMucThietBi = (typeof DANH_MUC_THIET_BI)[number];
+
 export const CHANG_LABEL: Record<ChangDon, string> = {
   yeu_cau: "Yêu cầu",
   bao_gia: "Báo giá",
@@ -45,6 +48,7 @@ export interface ThietBi {
   ma: string | null;
   ten: string;
   danh_muc: string | null;
+  hang: string | null;
   nguon_goc: NguonGoc;
   nha_cung_cap_id: string | null;
   gia_von: number | null;

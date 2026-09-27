@@ -13,10 +13,12 @@ export default function EquipmentActions({
   thietBi,
   giaHienHanh,
   danhSachNhaCungCap,
+  goiYHang,
 }: {
   thietBi: ThietBi;
   giaHienHanh: number;
   danhSachNhaCungCap: Pick<NhaCungCap, "id" | "ten">[];
+  goiYHang: Record<string, string[]>;
 }) {
   const { vai } = useVai();
   const router = useRouter();
@@ -77,6 +79,7 @@ export default function EquipmentActions({
           thietBi={thietBi}
           giaHienHanh={giaHienHanh}
           danhSachNhaCungCap={danhSachNhaCungCap}
+          goiYHang={goiYHang}
           onClose={() => setOpenSua(false)}
         />
       )}
