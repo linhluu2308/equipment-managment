@@ -5,6 +5,7 @@ export type ChangDon = "yeu_cau" | "bao_gia" | "da_giao" | "cho_tra" | "xong" | 
 export type LoaiThanhToan = "coc" | "dot" | "tat_toan" | "hoan_coc";
 export type TrangThaiGiayTo = "dang_giu" | "da_hoan_tra";
 export type TinhTrangThietBi = "tot" | "tray_xuoc" | "hong";
+export type CoSoTinhGiaVon = "ngay_di_chuyen" | "ngay_su_dung";
 
 export const DANH_MUC_THIET_BI = ["Camera", "Lens", "Lighting", "Accessories", "Crane & Grip"] as const;
 export type DanhMucThietBi = (typeof DANH_MUC_THIET_BI)[number];
@@ -41,6 +42,11 @@ export const TRANG_THAI_THIET_BI_BADGE: Record<TrangThaiThietBi, string> = {
   bao_tri: "badge-neutral",
   hong: "badge-danger",
   thanh_ly: "badge-neutral",
+};
+
+export const CO_SO_TINH_GIA_VON_LABEL: Record<CoSoTinhGiaVon, string> = {
+  ngay_di_chuyen: "Ngày di chuyển (xuất/nhập kho)",
+  ngay_su_dung: "Ngày sử dụng",
 };
 
 export interface ThietBi {
@@ -101,6 +107,8 @@ export interface DonThue {
   chang: ChangDon;
   ngay_bat_dau: string;
   ngay_tra_du_kien: string;
+  ngay_bat_dau_su_dung: string;
+  ngay_ket_thuc_su_dung: string;
   ghi_chu: string | null;
   created_at: string;
   updated_at: string;
@@ -113,6 +121,7 @@ export interface DonThueChiTiet {
   gia_thue_chot: number;
   phan_tram_chiet_khau: number;
   ngay_tra_thuc_te: string | null;
+  tinh_gia_von_theo: CoSoTinhGiaVon;
   created_at: string;
 }
 

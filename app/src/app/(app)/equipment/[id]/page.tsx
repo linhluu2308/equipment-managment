@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getThietBi, layGoiYHangTheoDanhMuc } from "@/lib/actions/thietBi";
 import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
-import { soNgayThueDong, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
+import { soNgayThueSuDung, soNgayVonDong, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
 import EquipmentActions from "@/components/equipment/EquipmentActions";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +32,9 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
   const giaHienHanh = lichSuGia[0]?.gia_thue ?? 0;
 
   const donXong = donHang.filter((d) => d.don_thue?.chang === "xong");
-  const doanhThu = donXong.reduce((sum, d) => sum + thanhTienDong(d, soNgayThueDong(d.don_thue, d)), 0);
+  const doanhThu = donXong.reduce((sum, d) => sum + thanhTienDong(d, soNgayThueSuDung(d.don_thue)), 0);
   const giaVonTong = thietBi.gia_von
-    ? donXong.reduce((sum, d) => sum + thietBi.gia_von! * soNgayThueDong(d.don_thue, d), 0)
+    ? donXong.reduce((sum, d) => sum + thietBi.gia_von! * soNgayVonDong(d.don_thue, d), 0)
     : 0;
   const loiNhuan = loiNhuanThietBi({ doanhThu, giaVon: giaVonTong, chiPhiKhac: 0 });
 

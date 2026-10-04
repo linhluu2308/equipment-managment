@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/admin";
-import { soNgayThueDong, thanhTienDong } from "@/lib/calculations";
+import { soNgayLogisticsDong, soNgayThueSuDung, soNgayVonDong, thanhTienDong } from "@/lib/calculations";
+import type { CoSoTinhGiaVon } from "@/lib/types";
 
 export interface DongBaoCaoThietBi {
   id: string;
@@ -38,7 +39,7 @@ export async function layBaoCaoThietBi(
   const { data: chiTietList, error: e2 } = await supabase
     .from("don_thue_chi_tiet")
     .select(
-      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, don_thue!inner(id, chang, ngay_bat_dau, ngay_tra_du_kien)"
+      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, tinh_gia_von_theo, don_thue!inner(id, chang, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
     );
   if (e2) throw new Error(e2.message);
 
@@ -52,7 +53,15 @@ export async function layBaoCaoThietBi(
     gia_thue_chot: number;
     phan_tram_chiet_khau: number;
     ngay_tra_thuc_te: string | null;
-    don_thue: { id: string; chang: string; ngay_bat_dau: string; ngay_tra_du_kien: string };
+    tinh_gia_von_theo: CoSoTinhGiaVon;
+    don_thue: {
+      id: string;
+      chang: string;
+      ngay_bat_dau: string;
+      ngay_tra_du_kien: string;
+      ngay_bat_dau_su_dung: string;
+      ngay_ket_thuc_su_dung: string;
+    };
   };
 
   const tatCaRows = (chiTietList ?? []) as unknown as Row[];
@@ -75,15 +84,17 @@ export async function layBaoCaoThietBi(
   const dong: DongBaoCaoThietBi[] = (thietBiList ?? []).map((tb) => {
     const cuaThietBi = rows.filter((r) => r.thiet_bi_id === tb.id && r.don_thue.chang !== "huy");
     const luotThue = cuaThietBi.length;
-    const tongNgayThue = cuaThietBi.reduce((sum, r) => sum + soNgayThueDong(r.don_thue, r), 0);
+    // Tần suất/số ngày thiết bị thực sự nằm ngoài kho (logistics) — dùng để đo hiệu
+    // suất sử dụng tài sản, khác với doanh thu/giá vốn (tính theo ngày sử dụng).
+    const tongNgayThue = cuaThietBi.reduce((sum, r) => sum + soNgayLogisticsDong(r.don_thue, r), 0);
 
     const daXong = cuaThietBi.filter((r) => r.don_thue.chang === "xong");
     const doanhThu = daXong.reduce((sum, r) => {
       donHoanTatIds.add(r.don_thue.id);
-      return sum + thanhTienDong(r, soNgayThueDong(r.don_thue, r));
+      return sum + thanhTienDong(r, soNgayThueSuDung(r.don_thue));
     }, 0);
     const giaVon = tb.gia_von
-      ? daXong.reduce((sum, r) => sum + tb.gia_von! * soNgayThueDong(r.don_thue, r), 0)
+      ? daXong.reduce((sum, r) => sum + tb.gia_von! * soNgayVonDong(r.don_thue, r), 0)
       : 0;
     const loiNhuan = doanhThu - giaVon;
 

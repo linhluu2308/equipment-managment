@@ -16,6 +16,8 @@ export default function XuatBaoGiaButton({
   sdtKhach,
   ngayBatDau,
   ngayTraDuKien,
+  ngayBatDauSuDung,
+  ngayKetThucSuDung,
   chiTiet,
   chang,
 }: {
@@ -24,6 +26,8 @@ export default function XuatBaoGiaButton({
   sdtKhach: string;
   ngayBatDau: string;
   ngayTraDuKien: string;
+  ngayBatDauSuDung: string;
+  ngayKetThucSuDung: string;
   chiTiet: DonChiTiet[];
   chang: ChangDon;
 }) {
@@ -41,7 +45,7 @@ export default function XuatBaoGiaButton({
         import("@/lib/pdf/BaoGiaDocument"),
       ]);
 
-      const soNgay = soNgayThue(ngayBatDau, ngayTraDuKien);
+      const soNgay = soNgayThue(ngayBatDauSuDung, ngayKetThucSuDung);
       const dong = chiTiet.map((l) => ({
         ten: l.thiet_bi?.ten ?? "Thiết bị",
         ma: l.thiet_bi?.ma ?? null,
@@ -58,6 +62,8 @@ export default function XuatBaoGiaButton({
           sdtKhach={sdtKhach}
           ngayBatDau={ngayBatDau}
           ngayTraDuKien={ngayTraDuKien}
+          ngayBatDauSuDung={ngayBatDauSuDung}
+          ngayKetThucSuDung={ngayKetThucSuDung}
           soNgay={soNgay}
           dong={dong}
         />

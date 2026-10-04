@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDonThue } from "@/lib/actions/donThue";
 import { CHANG_LABEL, type DonThueDetail } from "@/lib/types";
-import { soNgayThue, soNgayThueDong, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { soNgayThue, soNgayThueSuDung, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
@@ -16,6 +16,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const don = donRaw as unknown as DonThueDetail;
 
   const soNgayDuKien = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
+  const soNgaySuDung = soNgayThueSuDung(don);
   const tong = tongTienDon(don.don_thue_chi_tiet, don, don.chi_phi);
   const daThu = tongDaThu(don.thanh_toan);
   const congNo = tong - daThu;
@@ -45,6 +46,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               sdtKhach={don.khach_hang?.so_dien_thoai ?? ""}
               ngayBatDau={don.ngay_bat_dau}
               ngayTraDuKien={don.ngay_tra_du_kien}
+              ngayBatDauSuDung={don.ngay_bat_dau_su_dung}
+              ngayKetThucSuDung={don.ngay_ket_thuc_su_dung}
               chiTiet={don.don_thue_chi_tiet}
               chang={don.chang}
             />
@@ -60,12 +63,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <Field label="Số điện thoại" value={don.khach_hang?.so_dien_thoai} />
           <Field label="Người giới thiệu" value={don.khach_hang?.nguoi_gioi_thieu || "—"} />
           <Field
-            label="Dải ngày thuê"
+            label="Ngày xuất/nhập kho dự kiến"
             value={
               soThietBiTraKhacNgay > 0
-                ? `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} dự kiến (${soNgayDuKien} ngày) · ${soThietBiTraKhacNgay}/${don.don_thue_chi_tiet.length} thiết bị trả khác ngày — xem chi tiết bên dưới`
-                : `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} dự kiến (${soNgayDuKien} ngày)`
+                ? `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} (${soNgayDuKien} ngày) · ${soThietBiTraKhacNgay}/${don.don_thue_chi_tiet.length} thiết bị trả khác ngày — xem chi tiết bên dưới`
+                : `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} (${soNgayDuKien} ngày)`
             }
+          />
+          <Field
+            label="Ngày sử dụng (cơ sở tính tiền)"
+            value={`${don.ngay_bat_dau_su_dung} → ${don.ngay_ket_thuc_su_dung} (${soNgaySuDung} ngày)`}
           />
         </div>
         {don.ghi_chu && <p className="mt-2 text-sm text-[var(--text-muted)]">Ghi chú: {don.ghi_chu}</p>}
@@ -79,8 +86,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <tr>
                 <th>Thiết bị</th>
                 <th>Đơn giá/ngày</th>
-                <th>Ngày trả</th>
-                <th>Số ngày</th>
+                <th>Ngày nhập kho</th>
+                <th>Số ngày tính tiền</th>
                 <th>Chiết khấu</th>
                 <th>Thành tiền</th>
                 <th></th>
@@ -88,7 +95,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             </thead>
             <tbody>
               {don.don_thue_chi_tiet.map((l) => {
-                const soNgayDong = soNgayThueDong(don, l);
                 return (
                   <tr key={l.id}>
                     <td>
@@ -105,9 +111,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                         </span>
                       )}
                     </td>
-                    <td>{soNgayDong}</td>
+                    <td>{soNgaySuDung}</td>
                     <td>{l.phan_tram_chiet_khau}%</td>
-                    <td className="font-semibold">{thanhTienDong(l, soNgayDong).toLocaleString("vi-VN")}đ</td>
+                    <td className="font-semibold">{thanhTienDong(l, soNgaySuDung).toLocaleString("vi-VN")}đ</td>
                     <td className="text-right">
                       {don.chang === "yeu_cau" && <RemoveLineButton chiTietId={l.id} donId={don.id} />}
                     </td>

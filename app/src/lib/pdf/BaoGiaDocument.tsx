@@ -122,6 +122,8 @@ export interface BaoGiaProps {
   sdtKhach: string;
   ngayBatDau: string;
   ngayTraDuKien: string;
+  ngayBatDauSuDung: string;
+  ngayKetThucSuDung: string;
   soNgay: number;
   dong: DongThietBiBaoGia[];
 }
@@ -133,6 +135,8 @@ export default function BaoGiaDocument({
   sdtKhach,
   ngayBatDau,
   ngayTraDuKien,
+  ngayBatDauSuDung,
+  ngayKetThucSuDung,
   soNgay,
   dong,
 }: BaoGiaProps) {
@@ -167,11 +171,15 @@ export default function BaoGiaDocument({
             <Text style={s.giaTri}>{sdtKhach || "—"}</Text>
           </View>
           <View style={s.thongTinCot}>
-            <Text style={s.nhan}>Dải ngày thuê</Text>
+            <Text style={s.nhan}>Ngày xuất/nhập kho dự kiến</Text>
             <Text style={s.giaTri}>
               {ngayBatDau} → {ngayTraDuKien}
             </Text>
-            <Text style={s.nhan}>Số ngày thuê</Text>
+            <Text style={s.nhan}>Ngày sử dụng (tính tiền)</Text>
+            <Text style={s.giaTri}>
+              {ngayBatDauSuDung} → {ngayKetThucSuDung}
+            </Text>
+            <Text style={s.nhan}>Số ngày tính tiền</Text>
             <Text style={s.giaTri}>{soNgay} ngày</Text>
           </View>
         </View>

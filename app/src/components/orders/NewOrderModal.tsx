@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listThietBi } from "@/lib/actions/thietBi";
 import { taoDonThue, kiemTraTrungLich } from "@/lib/actions/donThue";
+import { CO_SO_TINH_GIA_VON_LABEL, type CoSoTinhGiaVon } from "@/lib/types";
 
 type ThietBiOption = {
   id: string;
@@ -10,10 +11,16 @@ type ThietBiOption = {
   ma: string | null;
   danh_muc: string | null;
   trang_thai: string;
+  nguon_goc: string;
   gia_hien_hanh: number;
 };
 
-type ChonThietBi = { thiet_bi_id: string; gia_thue_chot: number; phan_tram_chiet_khau: number };
+type ChonThietBi = {
+  thiet_bi_id: string;
+  gia_thue_chot: number;
+  phan_tram_chiet_khau: number;
+  tinh_gia_von_theo: CoSoTinhGiaVon;
+};
 
 export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const [thietBiList, setThietBiList] = useState<ThietBiOption[]>([]);
@@ -27,6 +34,8 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const [nguoiGioiThieu, setNguoiGioiThieu] = useState("");
   const [ngayBatDau, setNgayBatDau] = useState("");
   const [ngayTra, setNgayTra] = useState("");
+  const [ngayBatDauSuDung, setNgayBatDauSuDung] = useState("");
+  const [ngayKetThucSuDung, setNgayKetThucSuDung] = useState("");
   const [ghiChu, setGhiChu] = useState("");
 
   const [dangGui, setDangGui] = useState(false);
@@ -56,7 +65,12 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
       if (next[tb.id]) {
         delete next[tb.id];
       } else {
-        next[tb.id] = { thiet_bi_id: tb.id, gia_thue_chot: tb.gia_hien_hanh, phan_tram_chiet_khau: 0 };
+        next[tb.id] = {
+          thiet_bi_id: tb.id,
+          gia_thue_chot: tb.gia_hien_hanh,
+          phan_tram_chiet_khau: 0,
+          tinh_gia_von_theo: "ngay_di_chuyen",
+        };
       }
       return next;
     });
@@ -79,12 +93,24 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     setChon((prev) => ({ ...prev, [id]: { ...prev[id], phan_tram_chiet_khau: value } }));
   }
 
+  function capNhatCoSoTinhGiaVon(id: string, value: CoSoTinhGiaVon) {
+    setChon((prev) => ({ ...prev, [id]: { ...prev[id], tinh_gia_von_theo: value } }));
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoi("");
     if (!ten || !sdt) return setLoi("Cần nhập tên và số điện thoại khách hàng.");
-    if (!ngayBatDau || !ngayTra) return setLoi("Cần chọn ngày bắt đầu và ngày trả dự kiến.");
-    if (ngayTra < ngayBatDau) return setLoi("Ngày trả dự kiến không được sớm hơn ngày bắt đầu thuê.");
+    if (!ngayBatDau || !ngayTra) return setLoi("Cần chọn ngày xuất kho và ngày nhập kho dự kiến.");
+    if (ngayTra < ngayBatDau) return setLoi("Ngày nhập kho dự kiến không được sớm hơn ngày xuất kho.");
+    if (!ngayBatDauSuDung || !ngayKetThucSuDung) {
+      return setLoi("Cần chọn ngày bắt đầu và ngày kết thúc sử dụng thực tế.");
+    }
+    if (ngayBatDauSuDung < ngayBatDau) return setLoi("Ngày bắt đầu sử dụng không thể sớm hơn ngày xuất kho.");
+    if (ngayKetThucSuDung < ngayBatDauSuDung) {
+      return setLoi("Ngày kết thúc sử dụng không thể sớm hơn ngày bắt đầu sử dụng.");
+    }
+    if (ngayTra < ngayKetThucSuDung) return setLoi("Ngày nhập kho dự kiến không thể sớm hơn ngày kết thúc sử dụng.");
     if (Object.keys(chon).length === 0) return setLoi("Cần chọn ít nhất một thiết bị.");
 
     setDangGui(true);
@@ -94,6 +120,8 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
       khachHang: { ten, so_dien_thoai: sdt, nguoi_gioi_thieu: nguoiGioiThieu || undefined },
       ngay_bat_dau: ngayBatDau,
       ngay_tra_du_kien: ngayTra,
+      ngay_bat_dau_su_dung: ngayBatDauSuDung,
+      ngay_ket_thuc_su_dung: ngayKetThucSuDung,
       ghi_chu: ghiChu || undefined,
       thietBi: Object.values(chon),
     });
@@ -130,7 +158,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Ngày bắt đầu thuê">
+            <Field label="Ngày xuất kho">
               <input
                 type="date"
                 className="input"
@@ -139,7 +167,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setNgayBatDau(e.target.value)}
               />
             </Field>
-            <Field label="Ngày trả dự kiến">
+            <Field label="Ngày nhập kho dự kiến">
               <input
                 type="date"
                 className="input"
@@ -149,6 +177,33 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Ngày bắt đầu sử dụng (tính tiền)">
+              <input
+                type="date"
+                className="input"
+                value={ngayBatDauSuDung}
+                min={ngayBatDau || undefined}
+                max={ngayKetThucSuDung || ngayTra || undefined}
+                onChange={(e) => setNgayBatDauSuDung(e.target.value)}
+              />
+            </Field>
+            <Field label="Ngày kết thúc sử dụng (tính tiền)">
+              <input
+                type="date"
+                className="input"
+                value={ngayKetThucSuDung}
+                min={ngayBatDauSuDung || ngayBatDau || undefined}
+                max={ngayTra || undefined}
+                onChange={(e) => setNgayKetThucSuDung(e.target.value)}
+              />
+            </Field>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] -mt-1">
+            Khách có thể lấy sớm/trả muộn hơn ngày thực sự dùng để di chuyển — tổng tiền đơn chỉ tính theo
+            dải ngày sử dụng ở trên.
+          </p>
 
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -204,6 +259,21 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                       onClick={(e) => e.preventDefault()}
                       onChange={(e) => capNhatChietKhau(tb.id, Number(e.target.value))}
                     />
+                  )}
+                  {chon[tb.id] && tb.nguon_goc === "thue_ngoai" && (
+                    <select
+                      className="input !w-auto !py-1 text-xs"
+                      title="Cơ sở tính giá vốn/công nợ NCC cho thiết bị thuê ngoài này"
+                      value={chon[tb.id].tinh_gia_von_theo}
+                      onClick={(e) => e.preventDefault()}
+                      onChange={(e) => capNhatCoSoTinhGiaVon(tb.id, e.target.value as CoSoTinhGiaVon)}
+                    >
+                      {Object.entries(CO_SO_TINH_GIA_VON_LABEL).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          Giá vốn: {label}
+                        </option>
+                      ))}
+                    </select>
                   )}
                 </label>
               ))}

@@ -75,6 +75,9 @@ export default async function OrdersPage({
                   </td>
                   <td>
                     {o.ngay_bat_dau} → {o.ngay_tra_du_kien} ({soNgayDuKien} ngày)
+                    <div className="text-xs text-[var(--text-muted)]">
+                      Sử dụng: {o.ngay_bat_dau_su_dung} → {o.ngay_ket_thuc_su_dung}
+                    </div>
                     {coDieuChinhNgay && <div className="text-xs text-[var(--text-muted)]">Có thiết bị trả khác ngày</div>}
                   </td>
                   <td>{tong.toLocaleString("vi-VN")}đ</td>

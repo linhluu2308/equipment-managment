@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
-import { khoangNgayGiao, soNgayThueDong } from "@/lib/calculations";
-import type { ChangDon } from "@/lib/types";
+import { khoangNgayGiao, soNgayVonDong } from "@/lib/calculations";
+import type { ChangDon, CoSoTinhGiaVon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
 
@@ -53,13 +53,29 @@ export interface DauVaoTaoDonThue {
   khachHang: { ten: string; so_dien_thoai: string; nguoi_gioi_thieu?: string };
   ngay_bat_dau: string;
   ngay_tra_du_kien: string;
+  ngay_bat_dau_su_dung: string;
+  ngay_ket_thuc_su_dung: string;
   ghi_chu?: string;
-  thietBi: { thiet_bi_id: string; gia_thue_chot: number; phan_tram_chiet_khau: number }[];
+  thietBi: {
+    thiet_bi_id: string;
+    gia_thue_chot: number;
+    phan_tram_chiet_khau: number;
+    tinh_gia_von_theo?: CoSoTinhGiaVon;
+  }[];
 }
 
 export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: string }> {
   if (input.ngay_tra_du_kien < input.ngay_bat_dau) {
     return { error: "Ngày trả dự kiến không được sớm hơn ngày bắt đầu thuê." };
+  }
+  if (input.ngay_bat_dau_su_dung < input.ngay_bat_dau) {
+    return { error: "Ngày bắt đầu sử dụng không thể sớm hơn ngày xuất kho." };
+  }
+  if (input.ngay_ket_thuc_su_dung < input.ngay_bat_dau_su_dung) {
+    return { error: "Ngày kết thúc sử dụng không thể sớm hơn ngày bắt đầu sử dụng." };
+  }
+  if (input.ngay_tra_du_kien < input.ngay_ket_thuc_su_dung) {
+    return { error: "Ngày nhập kho dự kiến không thể sớm hơn ngày kết thúc sử dụng." };
   }
 
   for (const tb of input.thietBi) {
@@ -90,6 +106,8 @@ export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: str
     p_khach_nguoi_gioi_thieu: input.khachHang.nguoi_gioi_thieu || null,
     p_ngay_bat_dau: input.ngay_bat_dau,
     p_ngay_tra_du_kien: input.ngay_tra_du_kien,
+    p_ngay_bat_dau_su_dung: input.ngay_bat_dau_su_dung,
+    p_ngay_ket_thuc_su_dung: input.ngay_ket_thuc_su_dung,
     p_ghi_chu: input.ghi_chu || null,
     p_thiet_bi: input.thietBi,
   });
@@ -225,9 +243,10 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
 
 /**
  * Khi đơn hoàn tất, tự ghi nợ nhà cung cấp cho từng dòng thiết bị "thuê ngoài"
- * trong đơn: nợ = gia_von (VND/ngày) × số ngày thuê THỰC TẾ của riêng thiết bị
- * đó (ngay_tra_thuc_te trên chính dòng chi tiết, nếu chưa ghi thì tạm dùng ngày
- * trả dự kiến của đơn) — mỗi thiết bị trong đơn có thể trả khác ngày nhau. Dùng
+ * trong đơn: nợ = gia_von (VND/ngày) × số ngày tính giá vốn của riêng thiết bị đó.
+ * Tuỳ tinh_gia_von_theo trên dòng chi tiết: 'ngay_di_chuyen' (mặc định) = số ngày
+ * logistics (ngay_bat_dau → ngay_tra_thuc_te/ngay_tra_du_kien), hoặc 'ngay_su_dung'
+ * = đúng số ngày khách sử dụng của cả đơn — tuỳ quy ước tính tiền của từng NCC. Dùng
  * upsert + ignoreDuplicates trên unique(don_thue_id, thiet_bi_id) để không ghi
  * trùng nếu chuyenChangDon() lỡ chạy lại cho cùng 1 đơn.
  */
@@ -236,20 +255,21 @@ async function phatSinhCongNoNccChoDon(donId: string) {
 
   const { data: don, error: eDon } = await supabase
     .from("don_thue")
-    .select("ngay_bat_dau, ngay_tra_du_kien")
+    .select("ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung")
     .eq("id", donId)
     .single();
   if (eDon) throw new Error(eDon.message);
 
   const { data: chiTiet, error: eChiTiet } = await supabase
     .from("don_thue_chi_tiet")
-    .select("thiet_bi_id, ngay_tra_thuc_te, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)")
+    .select("thiet_bi_id, ngay_tra_thuc_te, tinh_gia_von_theo, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)")
     .eq("don_thue_id", donId);
   if (eChiTiet) throw new Error(eChiTiet.message);
 
   type Dong = {
     thiet_bi_id: string;
     ngay_tra_thuc_te: string | null;
+    tinh_gia_von_theo: CoSoTinhGiaVon;
     thiet_bi: { nguon_goc: string; nha_cung_cap_id: string | null; gia_von: number | null } | null;
   };
 
@@ -258,7 +278,7 @@ async function phatSinhCongNoNccChoDon(donId: string) {
     .map((d) => ({
       nha_cung_cap_id: d.thiet_bi!.nha_cung_cap_id!,
       loai: "no_phat_sinh" as const,
-      so_tien: d.thiet_bi!.gia_von! * soNgayThueDong(don, d),
+      so_tien: d.thiet_bi!.gia_von! * soNgayVonDong(don, d),
       don_thue_id: donId,
       thiet_bi_id: d.thiet_bi_id,
     }));
