@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { suaThietBi } from "@/lib/actions/thietBi";
 import type { NguonGoc, NhaCungCap, ThietBi } from "@/lib/types";
+import MoneyInput from "@/components/MoneyInput";
 import SupplierSelect from "./SupplierSelect";
 import CategoryBrandFields from "./CategoryBrandFields";
 
@@ -85,13 +86,7 @@ export default function EditEquipmentModal({
               <option value="so_huu">Tự sở hữu</option>
               <option value="thue_ngoai">Thuê ngoài</option>
             </select>
-            <input
-              className="input"
-              type="number"
-              placeholder="Giá thuê/ngày (VND)"
-              value={giaThue}
-              onChange={(e) => setGiaThue(e.target.value)}
-            />
+            <MoneyInput placeholder="Giá thuê/ngày (VND)" value={giaThue} onChange={setGiaThue} />
           </div>
           {giaThue && Number(giaThue) !== giaHienHanh && (
             <p className="text-xs text-[var(--text-muted)]">
@@ -101,13 +96,7 @@ export default function EditEquipmentModal({
           {nguonGoc === "thue_ngoai" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <SupplierSelect danhSach={danhSachNhaCungCap} value={nhaCungCapId} onChange={setNhaCungCapId} />
-              <input
-                className="input"
-                type="number"
-                placeholder="Giá vốn/ngày (VND)"
-                value={giaVon}
-                onChange={(e) => setGiaVon(e.target.value)}
-              />
+              <MoneyInput placeholder="Giá vốn/ngày (VND)" value={giaVon} onChange={setGiaVon} />
             </div>
           )}
           <textarea className="input" rows={2} placeholder="Mô tả" value={moTa} onChange={(e) => setMoTa(e.target.value)} />

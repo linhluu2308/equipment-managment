@@ -9,6 +9,7 @@ import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
 import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
 import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
 import type { ChangDon, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
+import MoneyInput from "@/components/MoneyInput";
 
 type DonChiTiet = {
   id: string;
@@ -140,13 +141,7 @@ function ThanhToanForm({ donId }: { donId: string }) {
     <form onSubmit={submit} className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
       <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Ghi nhận thanh toán</h3>
       <div className="flex gap-2">
-        <input
-          className="input"
-          type="number"
-          placeholder="Số tiền"
-          value={soTien}
-          onChange={(e) => setSoTien(e.target.value)}
-        />
+        <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
         <select className="input" value={loai} onChange={(e) => setLoai(e.target.value as LoaiThanhToan)}>
           <option value="coc">Cọc tiền</option>
           <option value="dot">Thanh toán đợt</option>
@@ -192,13 +187,7 @@ function ChiPhiForm({ donId }: { donId: string }) {
         <option>Phụ phí</option>
       </select>
       <input className="input" placeholder="Mô tả" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
-      <input
-        className="input"
-        type="number"
-        placeholder="Số tiền"
-        value={soTien}
-        onChange={(e) => setSoTien(e.target.value)}
-      />
+      <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
       <button disabled={pending} className="btn-primary w-full">
         {pending ? "Đang lưu..." : "Thêm chi phí"}
       </button>

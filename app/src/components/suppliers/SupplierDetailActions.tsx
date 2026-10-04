@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ghiNhanThanhToanNcc, xoaNhaCungCap } from "@/lib/actions/nhaCungCap";
 import type { NhaCungCap } from "@/lib/types";
+import MoneyInput from "@/components/MoneyInput";
 import SupplierModal from "./SupplierModal";
 
 export default function SupplierDetailActions({ nhaCungCap }: { nhaCungCap: NhaCungCap }) {
@@ -89,13 +90,7 @@ function RecordPaymentModal({ nhaCungCapId, onClose }: { nhaCungCapId: string; o
         </div>
         <form onSubmit={submit} className="flex flex-col overflow-hidden">
           <div className="modal-body">
-            <input
-              className="input"
-              type="number"
-              placeholder="Số tiền (VND)"
-              value={soTien}
-              onChange={(e) => setSoTien(e.target.value)}
-            />
+            <MoneyInput placeholder="Số tiền (VND)" value={soTien} onChange={setSoTien} />
             <input className="input" type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} />
             <textarea className="input" rows={2} placeholder="Ghi chú" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
 
