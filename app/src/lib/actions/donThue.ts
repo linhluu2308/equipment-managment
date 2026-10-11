@@ -347,8 +347,10 @@ export async function suaDonThue(
 
 /**
  * Xoá mềm đơn nhập sai — không xoá cứng vì đơn có thể đã phát sinh thanh toán/chi
- * phí/công nợ NCC cần giữ lại để đối chiếu. Nếu đơn đang ở chặng "Đã giao"/"Chờ trả"
- * (thiết bị thực sự đang ở ngoài), tự trả thiết bị liên quan về "Sẵn sàng".
+ * phí cần giữ lại để đối chiếu. Nếu đơn đang ở chặng "Đã giao"/"Chờ trả" (thiết bị
+ * thực sự đang ở ngoài), tự trả thiết bị liên quan về "Sẵn sàng". Nếu đơn đã ở chặng
+ * "Xong" (đã phát sinh công nợ NCC), xoá luôn các dòng nợ "no_phat_sinh" gắn với
+ * đơn này — tránh treo nợ sai trên sổ công nợ nhà cung cấp sau khi đơn bị xoá.
  */
 export async function xoaDonThue(donId: string, lyDo: string): Promise<{ error?: string }> {
   let nguoiSua: { ten: string; email: string };
@@ -374,16 +376,44 @@ export async function xoaDonThue(donId: string, lyDo: string): Promise<{ error?:
     await capNhatTrangThaiTheoThietBiTrongDon(donId, "san_sang");
   }
 
-  await ghiNhatKyThayDoiDon(donId, nguoiSua, "xoa", lyDo.trim(), { chang: don.chang }, null);
+  let soDongNoDaXoa = 0;
+  if (don.chang === "xong") {
+    const { data: xoaNo, error: eXoaNo } = await supabase
+      .from("giao_dich_cong_no_ncc")
+      .delete()
+      .eq("don_thue_id", donId)
+      .eq("loai", "no_phat_sinh")
+      .select("id");
+    if (eXoaNo) {
+      return {
+        error: `Đã xoá đơn nhưng xoá công nợ NCC liên quan thất bại: ${eXoaNo.message}. Cần kiểm tra lại bằng tay ở trang Nhà cung cấp.`,
+      };
+    }
+    soDongNoDaXoa = xoaNo?.length ?? 0;
+  }
+
+  await ghiNhatKyThayDoiDon(
+    donId,
+    nguoiSua,
+    "xoa",
+    lyDo.trim(),
+    { chang: don.chang, so_dong_no_ncc_da_xoa: soDongNoDaXoa || undefined },
+    null
+  );
 
   revalidatePath(`/orders/${donId}`);
   revalidatePath("/orders");
   revalidatePath("/");
   if (don.chang === "da_giao" || don.chang === "cho_tra") revalidatePath("/equipment");
+  if (soDongNoDaXoa > 0) revalidatePath("/suppliers");
   return {};
 }
 
-/** Khôi phục đơn đã xoá mềm — không tự giữ lại thiết bị, chủ tự xử lý nếu có xung đột lịch. */
+/**
+ * Khôi phục đơn đã xoá mềm — không tự giữ lại thiết bị, chủ tự xử lý nếu có xung đột
+ * lịch. Nếu đơn đang ở chặng "Xong" (nghĩa là công nợ NCC đã bị xoá lúc xoá đơn),
+ * phát sinh lại công nợ NCC tương ứng để đồng bộ với trạng thái trước khi xoá.
+ */
 export async function khoiPhucDonThue(donId: string, lyDo: string): Promise<{ error?: string }> {
   let nguoiSua: { ten: string; email: string };
   try {
@@ -394,17 +424,31 @@ export async function khoiPhucDonThue(donId: string, lyDo: string): Promise<{ er
   if (!lyDo.trim()) return { error: "Cần nhập lý do khôi phục đơn." };
 
   const supabase = createClient();
+  const { data: don, error: eDon } = await supabase.from("don_thue").select("chang").eq("id", donId).single();
+  if (eDon) return { error: eDon.message };
+
   const { error } = await supabase
     .from("don_thue")
     .update({ da_xoa: false, xoa_luc: null, xoa_boi: null })
     .eq("id", donId);
   if (error) return { error: error.message };
 
+  if (don.chang === "xong") {
+    try {
+      await phatSinhCongNoNccChoDon(donId);
+    } catch (err) {
+      return {
+        error: `Đã khôi phục đơn nhưng phát sinh lại công nợ NCC thất bại: ${(err as Error).message}. Cần kiểm tra lại bằng tay ở trang Nhà cung cấp.`,
+      };
+    }
+  }
+
   await ghiNhatKyThayDoiDon(donId, nguoiSua, "khoi_phuc", lyDo.trim(), null, null);
 
   revalidatePath(`/orders/${donId}`);
   revalidatePath("/orders");
   revalidatePath("/");
+  if (don.chang === "xong") revalidatePath("/suppliers");
   return {};
 }
 

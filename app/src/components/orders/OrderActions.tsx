@@ -136,7 +136,11 @@ function ChuActions({ don }: { don: DonThueDetail }) {
       {openXoa && (
         <OrderLyDoModal
           title="Xoá đơn thuê"
-          warning='Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Nếu đơn đang giữ thiết bị (Đã giao/Chờ trả), thiết bị sẽ tự chuyển về "Sẵn sàng".'
+          warning={
+            don.chang === "xong"
+              ? 'Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Đơn này đã ở chặng "Xong" nên công nợ nhà cung cấp đã phát sinh từ đơn sẽ bị xoá theo — khôi phục đơn sẽ tự phát sinh lại.'
+              : 'Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Nếu đơn đang giữ thiết bị (Đã giao/Chờ trả), thiết bị sẽ tự chuyển về "Sẵn sàng".'
+          }
           confirmLabel="Xoá đơn"
           danger
           action={(lyDo) => xoaDonThue(don.id, lyDo)}
