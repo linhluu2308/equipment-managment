@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDonThue } from "@/lib/actions/donThue";
-import { CHANG_LABEL, type DonThueDetail } from "@/lib/types";
+import { getDonThue, getLichSuThayDoiDon } from "@/lib/actions/donThue";
+import { CHANG_LABEL, HANH_DONG_LABEL, type DonThueDetail } from "@/lib/types";
 import { soNgayThue, soNgayThueSuDung, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
@@ -14,6 +14,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const donRaw = await getDonThue(id).catch(() => null);
   if (!donRaw) notFound();
   const don = donRaw as unknown as DonThueDetail;
+  const lichSuThayDoi = await getLichSuThayDoiDon(id);
 
   const soNgayDuKien = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
   const soNgaySuDung = soNgayThueSuDung(don);
@@ -53,6 +54,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             />
           </div>
         </div>
+        {don.da_xoa && (
+          <p className="badge badge-danger !inline-block mt-2">
+            🗑️ Đơn đã bị xoá lúc {don.xoa_luc ? new Date(don.xoa_luc).toLocaleString("vi-VN") : "—"}
+            {don.xoa_boi ? ` bởi ${don.xoa_boi}` : ""}
+          </p>
+        )}
         <Progress chang={don.chang} />
       </div>
 
@@ -218,9 +225,51 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </section>
       )}
 
+      {lichSuThayDoi.length > 0 && (
+        <section className="card">
+          <div className="card-title">Lịch sử thay đổi</div>
+          <ul className="text-sm divide-y divide-[var(--border-color)]">
+            {lichSuThayDoi.map((nk) => (
+              <li key={nk.id} className="py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    <span
+                      className={`badge ${
+                        nk.hanh_dong === "xoa" ? "badge-danger" : nk.hanh_dong === "khoi_phuc" ? "badge-success" : "badge-info"
+                      }`}
+                    >
+                      {HANH_DONG_LABEL[nk.hanh_dong]}
+                    </span>{" "}
+                    <span className="font-semibold">{nk.nguoi_sua}</span>
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)]">{new Date(nk.created_at).toLocaleString("vi-VN")}</span>
+                </div>
+                <p className="mt-1 text-[var(--text-muted)]">Lý do: {nk.ly_do}</p>
+                {nk.du_lieu_moi && Object.keys(nk.du_lieu_moi).length > 0 && (
+                  <ul className="mt-1 space-y-0.5 text-xs text-[var(--text-muted)]">
+                    {Object.keys(nk.du_lieu_moi).map((key) => (
+                      <li key={key}>
+                        <span className="font-mono">{key}</span>: {formatGiaTriThayDoi(nk.du_lieu_cu?.[key])} →{" "}
+                        {formatGiaTriThayDoi(nk.du_lieu_moi?.[key])}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <OrderActions don={don} />
     </div>
   );
+}
+
+function formatGiaTriThayDoi(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {

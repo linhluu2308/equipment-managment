@@ -9,6 +9,7 @@ export async function layTongQuan() {
     .from("don_thue")
     .select("*, khach_hang(ten, so_dien_thoai), don_thue_chi_tiet(id)")
     .in("chang", ["yeu_cau", "bao_gia", "da_giao", "cho_tra"])
+    .eq("da_xoa", false)
     .order("ngay_bat_dau");
   if (e1) throw new Error(e1.message);
 

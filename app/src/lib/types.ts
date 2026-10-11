@@ -110,8 +110,31 @@ export interface DonThue {
   ngay_bat_dau_su_dung: string;
   ngay_ket_thuc_su_dung: string;
   ghi_chu: string | null;
+  da_xoa: boolean;
+  xoa_luc: string | null;
+  xoa_boi: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type HanhDongThayDoiDon = "sua" | "xoa" | "khoi_phuc";
+
+export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
+  sua: "Sửa đơn",
+  xoa: "Xoá đơn",
+  khoi_phuc: "Khôi phục đơn",
+};
+
+export interface NhatKyThayDoiDon {
+  id: string;
+  don_thue_id: string;
+  nguoi_sua: string;
+  nguoi_sua_email: string;
+  hanh_dong: HanhDongThayDoiDon;
+  ly_do: string;
+  du_lieu_cu: Record<string, unknown> | null;
+  du_lieu_moi: Record<string, unknown> | null;
+  created_at: string;
 }
 
 export interface DonThueChiTiet {

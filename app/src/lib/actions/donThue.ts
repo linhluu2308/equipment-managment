@@ -3,10 +3,49 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import { khoangNgayGiao, soNgayVonDong } from "@/lib/calculations";
-import type { ChangDon, CoSoTinhGiaVon } from "@/lib/types";
+import type { ChangDon, CoSoTinhGiaVon, HanhDongThayDoiDon, NhatKyThayDoiDon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
+
+/**
+ * Xác thực người gọi đang đăng nhập và có vai "chu" — dùng cho mọi Server Action
+ * sửa/xoá/khôi phục đơn. RLS đang tắt toàn app (xem 0001_init.sql) nên đây là lớp
+ * kiểm tra quyền duy nhất ở tầng dữ liệu, không thể chỉ dựa vào useVai() ở client.
+ */
+async function nguoiDungHienTaiLaChu(): Promise<{ ten: string; email: string }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error("Chưa đăng nhập.");
+  const tv = await layThanhVienTheoEmail(user.email);
+  if (!tv || tv.vai !== "chu") throw new Error("Chỉ chủ mới được thực hiện thao tác này.");
+  return { ten: tv.ten, email: user.email };
+}
+
+async function ghiNhatKyThayDoiDon(
+  donId: string,
+  nguoiSua: { ten: string; email: string },
+  hanhDong: HanhDongThayDoiDon,
+  lyDo: string,
+  duLieuCu: Record<string, unknown> | null,
+  duLieuMoi: Record<string, unknown> | null
+) {
+  const supabase = createClient();
+  const { error } = await supabase.from("nhat_ky_thay_doi_don").insert({
+    don_thue_id: donId,
+    nguoi_sua: nguoiSua.ten,
+    nguoi_sua_email: nguoiSua.email,
+    hanh_dong: hanhDong,
+    ly_do: lyDo,
+    du_lieu_cu: duLieuCu,
+    du_lieu_moi: duLieuMoi,
+  });
+  if (error) throw new Error(error.message);
+}
 
 // Dùng chung ở listDonThue và getDonThue — tránh gõ trùng cấu trúc quan hệ tài chính mỗi lần select.
 const QUAN_HE_TAI_CHINH = "thanh_toan(*), chi_phi(*)";
@@ -125,6 +164,270 @@ export async function xoaThietBiKhoiDon(chiTietId: string, donId: string) {
   const { error } = await supabase.from("don_thue_chi_tiet").delete().eq("id", chiTietId);
   if (error) throw new Error(error.message);
   revalidatePath(`/orders/${donId}`);
+}
+
+export interface DauVaoSuaDonThue {
+  khachHang: { ten: string; so_dien_thoai: string; nguoi_gioi_thieu?: string };
+  ngay_bat_dau: string;
+  ngay_tra_du_kien: string;
+  ngay_bat_dau_su_dung: string;
+  ngay_ket_thuc_su_dung: string;
+  ghi_chu?: string;
+  thietBi: { id: string; gia_thue_chot: number; phan_tram_chiet_khau: number }[];
+}
+
+/**
+ * Sửa chi tiết đơn (khách hàng/ngày thuê/giá-chiết khấu từng dòng/ghi chú) ở BẤT KỲ
+ * chặng nào — khác với taoDonThue(), đây là sửa lại đơn đã tồn tại khi phát hiện
+ * nhập sai, không phải tạo mới. Chỉ vai "chu", bắt buộc nhập lý do, ghi 1 dòng vào
+ * nhat_ky_thay_doi_don chứa đúng các field thực sự đổi (giống cách suaThietBi() chỉ
+ * ghi lich_su_gia khi giá đổi — ở đây mở rộng ra nhiều field hơn 1 field).
+ */
+export async function suaDonThue(
+  donId: string,
+  input: DauVaoSuaDonThue,
+  lyDo: string
+): Promise<{ error?: string }> {
+  let nguoiSua: { ten: string; email: string };
+  try {
+    nguoiSua = await nguoiDungHienTaiLaChu();
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+  if (!lyDo.trim()) return { error: "Cần nhập lý do sửa đơn." };
+
+  if (input.ngay_tra_du_kien < input.ngay_bat_dau) {
+    return { error: "Ngày trả dự kiến không được sớm hơn ngày bắt đầu thuê." };
+  }
+  if (input.ngay_bat_dau_su_dung < input.ngay_bat_dau) {
+    return { error: "Ngày bắt đầu sử dụng không thể sớm hơn ngày xuất kho." };
+  }
+  if (input.ngay_ket_thuc_su_dung < input.ngay_bat_dau_su_dung) {
+    return { error: "Ngày kết thúc sử dụng không thể sớm hơn ngày bắt đầu sử dụng." };
+  }
+  if (input.ngay_tra_du_kien < input.ngay_ket_thuc_su_dung) {
+    return { error: "Ngày nhập kho dự kiến không thể sớm hơn ngày kết thúc sử dụng." };
+  }
+  for (const tb of input.thietBi) {
+    if (tb.phan_tram_chiet_khau < 0 || tb.phan_tram_chiet_khau > 100) {
+      return { error: "Chiết khấu phải nằm trong khoảng 0–100%." };
+    }
+    if (!tb.gia_thue_chot || tb.gia_thue_chot <= 0) {
+      return { error: "Giá thuê chốt cho thiết bị phải lớn hơn 0." };
+    }
+  }
+
+  const supabase = createClient();
+  const { data: donCu, error: eDon } = await supabase
+    .from("don_thue")
+    .select(
+      "khach_hang_id, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, ghi_chu, khach_hang(ten, so_dien_thoai, nguoi_gioi_thieu), don_thue_chi_tiet(id, gia_thue_chot, phan_tram_chiet_khau)"
+    )
+    .eq("id", donId)
+    .single();
+  if (eDon) return { error: eDon.message };
+
+  type DonCu = {
+    khach_hang_id: string;
+    ngay_bat_dau: string;
+    ngay_tra_du_kien: string;
+    ngay_bat_dau_su_dung: string;
+    ngay_ket_thuc_su_dung: string;
+    ghi_chu: string | null;
+    khach_hang: { ten: string; so_dien_thoai: string; nguoi_gioi_thieu: string | null } | null;
+    don_thue_chi_tiet: { id: string; gia_thue_chot: number; phan_tram_chiet_khau: number }[];
+  };
+  const cu = donCu as unknown as DonCu;
+
+  if (input.ngay_bat_dau !== cu.ngay_bat_dau || input.ngay_tra_du_kien !== cu.ngay_tra_du_kien) {
+    // kiemTraTrungLich cần thiet_bi_id, không phải chi_tiet id — lấy lại từ DB.
+    const { data: dsThietBi, error: eTb } = await supabase
+      .from("don_thue_chi_tiet")
+      .select("thiet_bi_id")
+      .eq("don_thue_id", donId);
+    if (eTb) return { error: eTb.message };
+    for (const l of dsThietBi ?? []) {
+      const kq = await kiemTraTrungLich(l.thiet_bi_id, input.ngay_bat_dau, input.ngay_tra_du_kien, donId);
+      if (kq.tinhTrang === "khoa_cung") {
+        return {
+          error: `Thiết bị không còn trống trong khoảng ngày mới này (đã bị giữ bởi đơn ${kq.donTrung?.ma_don ?? kq.donTrung?.id}).`,
+        };
+      }
+    }
+  }
+
+  const duLieuCu: Record<string, unknown> = {};
+  const duLieuMoi: Record<string, unknown> = {};
+
+  if (input.khachHang.ten !== cu.khach_hang?.ten) {
+    duLieuCu.khach_ten = cu.khach_hang?.ten;
+    duLieuMoi.khach_ten = input.khachHang.ten;
+  }
+  if (input.khachHang.so_dien_thoai !== cu.khach_hang?.so_dien_thoai) {
+    duLieuCu.khach_sdt = cu.khach_hang?.so_dien_thoai;
+    duLieuMoi.khach_sdt = input.khachHang.so_dien_thoai;
+  }
+  if ((input.khachHang.nguoi_gioi_thieu || null) !== (cu.khach_hang?.nguoi_gioi_thieu || null)) {
+    duLieuCu.nguoi_gioi_thieu = cu.khach_hang?.nguoi_gioi_thieu;
+    duLieuMoi.nguoi_gioi_thieu = input.khachHang.nguoi_gioi_thieu || null;
+  }
+  (
+    [
+      ["ngay_bat_dau", input.ngay_bat_dau, cu.ngay_bat_dau],
+      ["ngay_tra_du_kien", input.ngay_tra_du_kien, cu.ngay_tra_du_kien],
+      ["ngay_bat_dau_su_dung", input.ngay_bat_dau_su_dung, cu.ngay_bat_dau_su_dung],
+      ["ngay_ket_thuc_su_dung", input.ngay_ket_thuc_su_dung, cu.ngay_ket_thuc_su_dung],
+    ] as const
+  ).forEach(([key, moi, cuGiaTri]) => {
+    if (moi !== cuGiaTri) {
+      duLieuCu[key] = cuGiaTri;
+      duLieuMoi[key] = moi;
+    }
+  });
+  if ((input.ghi_chu || null) !== (cu.ghi_chu || null)) {
+    duLieuCu.ghi_chu = cu.ghi_chu;
+    duLieuMoi.ghi_chu = input.ghi_chu || null;
+  }
+  for (const tb of input.thietBi) {
+    const chiTietCu = cu.don_thue_chi_tiet.find((l) => l.id === tb.id);
+    if (!chiTietCu) continue;
+    if (tb.gia_thue_chot !== chiTietCu.gia_thue_chot || tb.phan_tram_chiet_khau !== chiTietCu.phan_tram_chiet_khau) {
+      duLieuCu[`thiet_bi_${tb.id}`] = {
+        gia_thue_chot: chiTietCu.gia_thue_chot,
+        phan_tram_chiet_khau: chiTietCu.phan_tram_chiet_khau,
+      };
+      duLieuMoi[`thiet_bi_${tb.id}`] = {
+        gia_thue_chot: tb.gia_thue_chot,
+        phan_tram_chiet_khau: tb.phan_tram_chiet_khau,
+      };
+    }
+  }
+
+  const coThayDoi = Object.keys(duLieuMoi).length > 0;
+
+  const { error: eKhach } = await supabase
+    .from("khach_hang")
+    .update({
+      ten: input.khachHang.ten,
+      so_dien_thoai: input.khachHang.so_dien_thoai,
+      nguoi_gioi_thieu: input.khachHang.nguoi_gioi_thieu || null,
+    })
+    .eq("id", cu.khach_hang_id);
+  if (eKhach) return { error: eKhach.message };
+
+  const { error: eDonUpdate } = await supabase
+    .from("don_thue")
+    .update({
+      ngay_bat_dau: input.ngay_bat_dau,
+      ngay_tra_du_kien: input.ngay_tra_du_kien,
+      ngay_bat_dau_su_dung: input.ngay_bat_dau_su_dung,
+      ngay_ket_thuc_su_dung: input.ngay_ket_thuc_su_dung,
+      ghi_chu: input.ghi_chu || null,
+    })
+    .eq("id", donId);
+  if (eDonUpdate) return { error: eDonUpdate.message };
+
+  for (const tb of input.thietBi) {
+    const { error: eLine } = await supabase
+      .from("don_thue_chi_tiet")
+      .update({ gia_thue_chot: tb.gia_thue_chot, phan_tram_chiet_khau: tb.phan_tram_chiet_khau })
+      .eq("id", tb.id);
+    if (eLine) return { error: eLine.message };
+  }
+
+  if (coThayDoi) {
+    await ghiNhatKyThayDoiDon(donId, nguoiSua, "sua", lyDo.trim(), duLieuCu, duLieuMoi);
+  }
+
+  revalidatePath(`/orders/${donId}`);
+  revalidatePath("/orders");
+  revalidatePath("/");
+  return {};
+}
+
+/**
+ * Xoá mềm đơn nhập sai — không xoá cứng vì đơn có thể đã phát sinh thanh toán/chi
+ * phí/công nợ NCC cần giữ lại để đối chiếu. Nếu đơn đang ở chặng "Đã giao"/"Chờ trả"
+ * (thiết bị thực sự đang ở ngoài), tự trả thiết bị liên quan về "Sẵn sàng".
+ */
+export async function xoaDonThue(donId: string, lyDo: string): Promise<{ error?: string }> {
+  let nguoiSua: { ten: string; email: string };
+  try {
+    nguoiSua = await nguoiDungHienTaiLaChu();
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+  if (!lyDo.trim()) return { error: "Cần nhập lý do xoá đơn." };
+
+  const supabase = createClient();
+  const { data: don, error: eDon } = await supabase.from("don_thue").select("chang, da_xoa").eq("id", donId).single();
+  if (eDon) return { error: eDon.message };
+  if (don.da_xoa) return { error: "Đơn này đã bị xoá rồi." };
+
+  const { error } = await supabase
+    .from("don_thue")
+    .update({ da_xoa: true, xoa_luc: new Date().toISOString(), xoa_boi: nguoiSua.ten })
+    .eq("id", donId);
+  if (error) return { error: error.message };
+
+  if (don.chang === "da_giao" || don.chang === "cho_tra") {
+    await capNhatTrangThaiTheoThietBiTrongDon(donId, "san_sang");
+  }
+
+  await ghiNhatKyThayDoiDon(donId, nguoiSua, "xoa", lyDo.trim(), { chang: don.chang }, null);
+
+  revalidatePath(`/orders/${donId}`);
+  revalidatePath("/orders");
+  revalidatePath("/");
+  if (don.chang === "da_giao" || don.chang === "cho_tra") revalidatePath("/equipment");
+  return {};
+}
+
+/** Khôi phục đơn đã xoá mềm — không tự giữ lại thiết bị, chủ tự xử lý nếu có xung đột lịch. */
+export async function khoiPhucDonThue(donId: string, lyDo: string): Promise<{ error?: string }> {
+  let nguoiSua: { ten: string; email: string };
+  try {
+    nguoiSua = await nguoiDungHienTaiLaChu();
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+  if (!lyDo.trim()) return { error: "Cần nhập lý do khôi phục đơn." };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("don_thue")
+    .update({ da_xoa: false, xoa_luc: null, xoa_boi: null })
+    .eq("id", donId);
+  if (error) return { error: error.message };
+
+  await ghiNhatKyThayDoiDon(donId, nguoiSua, "khoi_phuc", lyDo.trim(), null, null);
+
+  revalidatePath(`/orders/${donId}`);
+  revalidatePath("/orders");
+  revalidatePath("/");
+  return {};
+}
+
+export async function getLichSuThayDoiDon(donId: string): Promise<NhatKyThayDoiDon[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("nhat_ky_thay_doi_don")
+    .select("*")
+    .eq("don_thue_id", donId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data as NhatKyThayDoiDon[];
+}
+
+export async function listDonThueDaXoa() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("don_thue")
+    .select(`*, khach_hang(ten, so_dien_thoai), don_thue_chi_tiet(*), ${QUAN_HE_TAI_CHINH}`)
+    .eq("da_xoa", true)
+    .order("xoa_luc", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 /**
@@ -336,6 +639,7 @@ export async function listDonThue(chang?: ChangDon) {
     .select(
       `*, khach_hang(ten, so_dien_thoai), don_thue_chi_tiet(*), ${QUAN_HE_TAI_CHINH}`
     )
+    .eq("da_xoa", false)
     .order("created_at", { ascending: false });
   if (chang) query = query.eq("chang", chang);
   const { data, error } = await query;

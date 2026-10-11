@@ -2,14 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { chuyenChangDon } from "@/lib/actions/donThue";
+import { useVai } from "@/lib/auth-context";
+import { chuyenChangDon, xoaDonThue, khoiPhucDonThue } from "@/lib/actions/donThue";
 import { ghiThanhToan } from "@/lib/actions/thanhToan";
 import { ghiChiPhi } from "@/lib/actions/chiPhi";
 import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
 import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
 import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
-import type { ChangDon, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
+import type { ChangDon, DonThueDetail, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
 import MoneyInput from "@/components/MoneyInput";
+import EditOrderModal from "./EditOrderModal";
+import OrderLyDoModal from "./OrderLyDoModal";
 
 type DonChiTiet = {
   id: string;
@@ -17,17 +20,10 @@ type DonChiTiet = {
   ngay_tra_thuc_te: string | null;
   thiet_bi: { ten: string } | null;
 };
-type DonForActions = {
-  id: string;
-  chang: ChangDon;
-  ngay_bat_dau: string;
-  ngay_tra_du_kien: string;
-  don_thue_chi_tiet: DonChiTiet[];
-  coc_giay_to: { id: string; trang_thai: string }[];
-};
 
-export default function OrderActions({ don }: { don: DonForActions }) {
+export default function OrderActions({ don }: { don: DonThueDetail }) {
   const router = useRouter();
+  const { vai } = useVai();
   const [pending, start] = useTransition();
   const [loi, setLoi] = useState("");
 
@@ -43,49 +39,53 @@ export default function OrderActions({ don }: { don: DonForActions }) {
     });
   }
 
-  if (don.chang === "xong" || don.chang === "huy") {
-    return null;
-  }
+  const choPhepChuyenChang = !don.da_xoa && don.chang !== "xong" && don.chang !== "huy";
+  const hienFormTaiChinh = !don.da_xoa && (don.chang === "bao_gia" || don.chang === "da_giao" || don.chang === "cho_tra");
+
+  // Đơn đã Xong/Huỷ và không phải vai chu thì không có gì để làm ở đây.
+  if (!choPhepChuyenChang && !hienFormTaiChinh && vai !== "chu") return null;
 
   return (
     <section className="card space-y-4">
       <div className="card-title !mb-0">Thao tác</div>
       {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
 
-      <div className="flex flex-wrap gap-2">
-        {don.chang === "yeu_cau" && (
-          <>
-            <ActionButton onClick={() => chuyenChang("bao_gia")} pending={pending}>
-              Lập báo giá
+      {choPhepChuyenChang && (
+        <div className="flex flex-wrap gap-2">
+          {don.chang === "yeu_cau" && (
+            <>
+              <ActionButton onClick={() => chuyenChang("bao_gia")} pending={pending}>
+                Lập báo giá
+              </ActionButton>
+              <ActionButton onClick={() => chuyenChang("huy")} pending={pending} danger>
+                Từ chối / Huỷ đơn
+              </ActionButton>
+            </>
+          )}
+          {don.chang === "bao_gia" && (
+            <>
+              <ActionButton onClick={() => chuyenChang("da_giao")} pending={pending}>
+                Xác nhận giao thiết bị
+              </ActionButton>
+              <ActionButton onClick={() => chuyenChang("huy")} pending={pending} danger>
+                Huỷ đơn
+              </ActionButton>
+            </>
+          )}
+          {don.chang === "da_giao" && (
+            <ActionButton onClick={() => chuyenChang("cho_tra")} pending={pending}>
+              Nhận thiết bị về kho
             </ActionButton>
-            <ActionButton onClick={() => chuyenChang("huy")} pending={pending} danger>
-              Từ chối / Huỷ đơn
+          )}
+          {don.chang === "cho_tra" && (
+            <ActionButton onClick={() => chuyenChang("xong")} pending={pending}>
+              Chốt công nợ & Hoàn tất
             </ActionButton>
-          </>
-        )}
-        {don.chang === "bao_gia" && (
-          <>
-            <ActionButton onClick={() => chuyenChang("da_giao")} pending={pending}>
-              Xác nhận giao thiết bị
-            </ActionButton>
-            <ActionButton onClick={() => chuyenChang("huy")} pending={pending} danger>
-              Huỷ đơn
-            </ActionButton>
-          </>
-        )}
-        {don.chang === "da_giao" && (
-          <ActionButton onClick={() => chuyenChang("cho_tra")} pending={pending}>
-            Nhận thiết bị về kho
-          </ActionButton>
-        )}
-        {don.chang === "cho_tra" && (
-          <ActionButton onClick={() => chuyenChang("xong")} pending={pending}>
-            Chốt công nợ & Hoàn tất
-          </ActionButton>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {don.chang !== "yeu_cau" && (
+      {hienFormTaiChinh && (
         <div className="grid gap-4 border-t border-[var(--border-color)] pt-4 md:grid-cols-2">
           <ThanhToanForm donId={don.id} />
           <ChiPhiForm donId={don.id} />
@@ -98,7 +98,60 @@ export default function OrderActions({ don }: { don: DonForActions }) {
           )}
         </div>
       )}
+
+      {vai === "chu" && <ChuActions don={don} />}
     </section>
+  );
+}
+
+function ChuActions({ don }: { don: DonThueDetail }) {
+  const [openSua, setOpenSua] = useState(false);
+  const [openXoa, setOpenXoa] = useState(false);
+  const [openKhoiPhuc, setOpenKhoiPhuc] = useState(false);
+
+  return (
+    <div className="border-t border-[var(--border-color)] pt-4">
+      <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+        Quản lý đơn (chủ)
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {don.da_xoa ? (
+          <button className="btn-primary" onClick={() => setOpenKhoiPhuc(true)}>
+            🔄 Khôi phục đơn
+          </button>
+        ) : (
+          <>
+            <button className="btn-secondary" onClick={() => setOpenSua(true)}>
+              ✏️ Sửa đơn
+            </button>
+            <button className="btn-danger-outline" onClick={() => setOpenXoa(true)}>
+              🗑️ Xoá đơn
+            </button>
+          </>
+        )}
+      </div>
+
+      {openSua && <EditOrderModal don={don} onClose={() => setOpenSua(false)} />}
+      {openXoa && (
+        <OrderLyDoModal
+          title="Xoá đơn thuê"
+          warning='Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Nếu đơn đang giữ thiết bị (Đã giao/Chờ trả), thiết bị sẽ tự chuyển về "Sẵn sàng".'
+          confirmLabel="Xoá đơn"
+          danger
+          action={(lyDo) => xoaDonThue(don.id, lyDo)}
+          onClose={() => setOpenXoa(false)}
+        />
+      )}
+      {openKhoiPhuc && (
+        <OrderLyDoModal
+          title="Khôi phục đơn thuê"
+          warning="Đơn sẽ hiện lại trong danh sách và báo cáo như bình thường."
+          confirmLabel="Khôi phục đơn"
+          action={(lyDo) => khoiPhucDonThue(don.id, lyDo)}
+          onClose={() => setOpenKhoiPhuc(false)}
+        />
+      )}
+    </div>
   );
 }
 

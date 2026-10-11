@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { listDonThue } from "@/lib/actions/donThue";
+import { listDonThue, listDonThueDaXoa } from "@/lib/actions/donThue";
+import { createClient } from "@/lib/supabase/server";
+import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import { CHANG_BADGE, CHANG_LABEL, type ChangDon } from "@/lib/types";
 import { soNgayThue, tongTienDon, tongDaThu } from "@/lib/calculations";
 import NewOrderButton from "@/components/orders/NewOrderButton";
@@ -22,8 +24,17 @@ export default async function OrdersPage({
   searchParams: Promise<{ chang?: string }>;
 }) {
   const { chang } = await searchParams;
-  const filter = (chang as ChangDon | undefined) ?? undefined;
-  const orders = await listDonThue(filter);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const thanhVien = user?.email ? await layThanhVienTheoEmail(user.email) : null;
+  const laChu = thanhVien?.vai === "chu";
+
+  const dangXemDaXoa = laChu && chang === "da_xoa";
+  const filter = dangXemDaXoa ? undefined : (chang as ChangDon | undefined) ?? undefined;
+  const orders = dangXemDaXoa ? await listDonThueDaXoa() : await listDonThue(filter);
 
   return (
     <>
@@ -35,11 +46,16 @@ export default async function OrdersPage({
               <Link
                 key={t.value}
                 href={t.value === "tat_ca" ? "/orders" : `/orders?chang=${t.value}`}
-                className={`pill ${(filter ?? "tat_ca") === t.value ? "active" : ""}`}
+                className={`pill ${!dangXemDaXoa && (filter ?? "tat_ca") === t.value ? "active" : ""}`}
               >
                 {t.label}
               </Link>
             ))}
+            {laChu && (
+              <Link href="/orders?chang=da_xoa" className={`pill ${dangXemDaXoa ? "active" : ""}`}>
+                Đã xoá
+              </Link>
+            )}
           </div>
         </div>
         <NewOrderButton />

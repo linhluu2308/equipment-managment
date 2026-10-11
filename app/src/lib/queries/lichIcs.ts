@@ -23,6 +23,7 @@ export async function layDanhSachSuKienLich(): Promise<SuKienLich[]> {
     .from("don_thue")
     .select("id, chang, ngay_bat_dau, ngay_tra_du_kien, updated_at, khach_hang(ten, so_dien_thoai), don_thue_chi_tiet(id)")
     .neq("chang", "huy")
+    .eq("da_xoa", false)
     .order("ngay_bat_dau");
   if (error) throw new Error(error.message);
 
