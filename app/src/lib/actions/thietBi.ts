@@ -50,9 +50,10 @@ export async function getThietBi(id: string) {
       supabase
         .from("don_thue_chi_tiet")
         .select(
-          "*, don_thue(id, ma_don, chang, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, khach_hang(ten))"
+          "*, don_thue!inner(id, ma_don, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, khach_hang(ten))"
         )
-        .eq("thiet_bi_id", id),
+        .eq("thiet_bi_id", id)
+        .eq("don_thue.da_xoa", false),
       supabase
         .from("kiem_tra_tinh_trang")
         .select("*")

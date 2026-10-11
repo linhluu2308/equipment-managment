@@ -39,13 +39,13 @@ export async function layBaoCaoThietBi(
   const { data: chiTietList, error: e2 } = await supabase
     .from("don_thue_chi_tiet")
     .select(
-      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, tinh_gia_von_theo, don_thue!inner(id, chang, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
+      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, tinh_gia_von_theo, don_thue!inner(id, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
     );
   if (e2) throw new Error(e2.message);
 
   const { data: chiPhiList, error: e3 } = await supabase
     .from("chi_phi")
-    .select("so_tien, don_thue!inner(chang, ngay_bat_dau)");
+    .select("so_tien, don_thue!inner(chang, da_xoa, ngay_bat_dau)");
   if (e3) throw new Error(e3.message);
 
   type Row = {
@@ -57,6 +57,7 @@ export async function layBaoCaoThietBi(
     don_thue: {
       id: string;
       chang: string;
+      da_xoa: boolean;
       ngay_bat_dau: string;
       ngay_tra_du_kien: string;
       ngay_bat_dau_su_dung: string;
@@ -64,15 +65,16 @@ export async function layBaoCaoThietBi(
     };
   };
 
-  const tatCaRows = (chiTietList ?? []) as unknown as Row[];
+  // Đơn đã xoá mềm (da_xoa) không tính vào báo cáo — dù trước đó đã ở chặng "Xong".
+  const tatCaRows = ((chiTietList ?? []) as unknown as Row[]).filter((r) => !r.don_thue.da_xoa);
   const rows =
     tuNgay && denNgay
       ? tatCaRows.filter((r) => r.don_thue.ngay_bat_dau >= tuNgay && r.don_thue.ngay_bat_dau <= denNgay)
       : tatCaRows;
   const donHoanTatIds = new Set<string>();
 
-  type ChiPhiRow = { so_tien: number; don_thue: { chang: string; ngay_bat_dau: string } };
-  const tatCaChiPhi = (chiPhiList ?? []) as unknown as ChiPhiRow[];
+  type ChiPhiRow = { so_tien: number; don_thue: { chang: string; da_xoa: boolean; ngay_bat_dau: string } };
+  const tatCaChiPhi = ((chiPhiList ?? []) as unknown as ChiPhiRow[]).filter((c) => !c.don_thue.da_xoa);
   const tongChiPhi = tatCaChiPhi
     .filter(
       (c) =>
