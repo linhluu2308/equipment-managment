@@ -14,6 +14,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { CHANG_BADGE, CHANG_LABEL, type ChangDon } from "@/lib/types";
+import { formatNgay } from "@/lib/formatDate";
 
 export type CalendarEvent = {
   id: string;
@@ -139,7 +140,7 @@ export default function CalendarGrid({ events }: { events: CalendarEvent[] }) {
             <div className="modal-body">
               <p className="text-sm text-[var(--text-muted)]">{xemNhanh.sdt_khach}</p>
               <p className="text-sm">
-                {xemNhanh.ngay_bat_dau} → {xemNhanh.ngay_tra_du_kien}
+                {formatNgay(xemNhanh.ngay_bat_dau)} → {formatNgay(xemNhanh.ngay_tra_du_kien)}
               </p>
               <p className="text-sm text-[var(--text-muted)]">{xemNhanh.so_thiet_bi} thiết bị</p>
             </div>

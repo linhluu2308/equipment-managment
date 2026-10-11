@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import { CHANG_BADGE, CHANG_LABEL, type ChangDon } from "@/lib/types";
 import { soNgayThue, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { formatNgay } from "@/lib/formatDate";
 import NewOrderButton from "@/components/orders/NewOrderButton";
 
 export const dynamic = "force-dynamic";
@@ -90,9 +91,9 @@ export default async function OrdersPage({
                     <div className="text-xs text-[var(--text-muted)]">{o.khach_hang?.so_dien_thoai}</div>
                   </td>
                   <td>
-                    {o.ngay_bat_dau} → {o.ngay_tra_du_kien} ({soNgayDuKien} ngày)
+                    {formatNgay(o.ngay_bat_dau)} → {formatNgay(o.ngay_tra_du_kien)} ({soNgayDuKien} ngày)
                     <div className="text-xs text-[var(--text-muted)]">
-                      Sử dụng: {o.ngay_bat_dau_su_dung} → {o.ngay_ket_thuc_su_dung}
+                      Sử dụng: {formatNgay(o.ngay_bat_dau_su_dung)} → {formatNgay(o.ngay_ket_thuc_su_dung)}
                     </div>
                     {coDieuChinhNgay && <div className="text-xs text-[var(--text-muted)]">Có thiết bị trả khác ngày</div>}
                   </td>

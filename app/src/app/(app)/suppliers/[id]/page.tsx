@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import { layNhaCungCap } from "@/lib/queries/nhaCungCap";
+import { formatNgay } from "@/lib/formatDate";
 import SupplierDetailActions from "@/components/suppliers/SupplierDetailActions";
 
 export const dynamic = "force-dynamic";
@@ -92,7 +93,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
             <tbody>
               {giaoDich.map((g) => (
                 <tr key={g.id}>
-                  <td className="font-mono text-xs">{g.ngay}</td>
+                  <td className="font-mono text-xs">{formatNgay(g.ngay)}</td>
                   <td>
                     <span className={`badge ${LOAI_GIAO_DICH_BADGE[g.loai]}`}>{LOAI_GIAO_DICH_LABEL[g.loai]}</span>
                   </td>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { layTongQuan } from "@/lib/queries/tongQuan";
 import { CHANG_BADGE, CHANG_LABEL, type ChangDon } from "@/lib/types";
+import { formatNgay } from "@/lib/formatDate";
 
 export const dynamic = "force-dynamic";
 
@@ -123,7 +124,7 @@ function OrderTable({ orders, empty }: { orders: OrderRow[]; empty: string }) {
                 <div className="text-xs text-[var(--text-muted)]">{o.khach_hang?.so_dien_thoai}</div>
               </td>
               <td>
-                {o.ngay_bat_dau} → {o.ngay_tra_du_kien}
+                {formatNgay(o.ngay_bat_dau)} → {formatNgay(o.ngay_tra_du_kien)}
               </td>
               <td>{o.don_thue_chi_tiet?.length ?? 0}</td>
               <td>

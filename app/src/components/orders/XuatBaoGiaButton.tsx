@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { soNgayThue, thanhTienDong } from "@/lib/calculations";
+import { formatNgay } from "@/lib/formatDate";
 import type { ChangDon } from "@/lib/types";
 
 type DonChiTiet = {
@@ -57,13 +58,13 @@ export default function XuatBaoGiaButton({
       const blob = await pdf(
         <BaoGiaDocument
           maDon={maDon}
-          ngayLap={new Date().toLocaleDateString("vi-VN")}
+          ngayLap={formatNgay(new Date().toISOString())}
           tenKhach={tenKhach}
           sdtKhach={sdtKhach}
-          ngayBatDau={ngayBatDau}
-          ngayTraDuKien={ngayTraDuKien}
-          ngayBatDauSuDung={ngayBatDauSuDung}
-          ngayKetThucSuDung={ngayKetThucSuDung}
+          ngayBatDau={formatNgay(ngayBatDau)}
+          ngayTraDuKien={formatNgay(ngayTraDuKien)}
+          ngayBatDauSuDung={formatNgay(ngayBatDauSuDung)}
+          ngayKetThucSuDung={formatNgay(ngayKetThucSuDung)}
           soNgay={soNgay}
           dong={dong}
         />

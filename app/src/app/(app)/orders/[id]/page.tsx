@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getDonThue, getLichSuThayDoiDon } from "@/lib/actions/donThue";
 import { CHANG_LABEL, HANH_DONG_LABEL, type DonThueDetail } from "@/lib/types";
 import { soNgayThue, soNgayThueSuDung, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { formatNgay, formatNgayGio } from "@/lib/formatDate";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
@@ -56,7 +57,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
         {don.da_xoa && (
           <p className="badge badge-danger !inline-block mt-2">
-            🗑️ Đơn đã bị xoá lúc {don.xoa_luc ? new Date(don.xoa_luc).toLocaleString("vi-VN") : "—"}
+            🗑️ Đơn đã bị xoá lúc {formatNgayGio(don.xoa_luc)}
             {don.xoa_boi ? ` bởi ${don.xoa_boi}` : ""}
           </p>
         )}
@@ -73,13 +74,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             label="Ngày xuất/nhập kho dự kiến"
             value={
               soThietBiTraKhacNgay > 0
-                ? `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} (${soNgayDuKien} ngày) · ${soThietBiTraKhacNgay}/${don.don_thue_chi_tiet.length} thiết bị trả khác ngày — xem chi tiết bên dưới`
-                : `${don.ngay_bat_dau} → ${don.ngay_tra_du_kien} (${soNgayDuKien} ngày)`
+                ? `${formatNgay(don.ngay_bat_dau)} → ${formatNgay(don.ngay_tra_du_kien)} (${soNgayDuKien} ngày) · ${soThietBiTraKhacNgay}/${don.don_thue_chi_tiet.length} thiết bị trả khác ngày — xem chi tiết bên dưới`
+                : `${formatNgay(don.ngay_bat_dau)} → ${formatNgay(don.ngay_tra_du_kien)} (${soNgayDuKien} ngày)`
             }
           />
           <Field
             label="Ngày sử dụng (cơ sở tính tiền)"
-            value={`${don.ngay_bat_dau_su_dung} → ${don.ngay_ket_thuc_su_dung} (${soNgaySuDung} ngày)`}
+            value={`${formatNgay(don.ngay_bat_dau_su_dung)} → ${formatNgay(don.ngay_ket_thuc_su_dung)} (${soNgaySuDung} ngày)`}
           />
         </div>
         {don.ghi_chu && <p className="mt-2 text-sm text-[var(--text-muted)]">Ghi chú: {don.ghi_chu}</p>}
@@ -111,10 +112,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     <td>{l.gia_thue_chot.toLocaleString("vi-VN")}đ</td>
                     <td>
                       {l.ngay_tra_thuc_te ? (
-                        <span title="Ngày trả thực tế">{l.ngay_tra_thuc_te}</span>
+                        <span title="Ngày trả thực tế">{formatNgay(l.ngay_tra_thuc_te)}</span>
                       ) : (
                         <span className="text-[var(--text-muted)]" title="Chưa ghi ngày trả thực tế, tạm dùng ngày dự kiến">
-                          {don.ngay_tra_du_kien} (dự kiến)
+                          {formatNgay(don.ngay_tra_du_kien)} (dự kiến)
                         </span>
                       )}
                     </td>
@@ -148,7 +149,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             {don.thanh_toan.map((t) => (
               <li key={t.id} className="flex justify-between py-1.5">
                 <span>
-                  {t.loai} · {t.ngay_thu} {t.hinh_thuc && `· ${t.hinh_thuc}`}
+                  {t.loai} · {formatNgay(t.ngay_thu)} {t.hinh_thuc && `· ${t.hinh_thuc}`}
                 </span>
                 <span className="font-semibold">{t.so_tien.toLocaleString("vi-VN")}đ</span>
               </li>
@@ -242,15 +243,15 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     </span>{" "}
                     <span className="font-semibold">{nk.nguoi_sua}</span>
                   </span>
-                  <span className="text-xs text-[var(--text-muted)]">{new Date(nk.created_at).toLocaleString("vi-VN")}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{formatNgayGio(nk.created_at)}</span>
                 </div>
                 <p className="mt-1 text-[var(--text-muted)]">Lý do: {nk.ly_do}</p>
                 {nk.du_lieu_moi && Object.keys(nk.du_lieu_moi).length > 0 && (
                   <ul className="mt-1 space-y-0.5 text-xs text-[var(--text-muted)]">
                     {Object.keys(nk.du_lieu_moi).map((key) => (
                       <li key={key}>
-                        <span className="font-mono">{key}</span>: {formatGiaTriThayDoi(nk.du_lieu_cu?.[key])} →{" "}
-                        {formatGiaTriThayDoi(nk.du_lieu_moi?.[key])}
+                        <span className="font-mono">{key}</span>: {formatGiaTriThayDoi(key, nk.du_lieu_cu?.[key])} →{" "}
+                        {formatGiaTriThayDoi(key, nk.du_lieu_moi?.[key])}
                       </li>
                     ))}
                   </ul>
@@ -266,8 +267,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   );
 }
 
-function formatGiaTriThayDoi(v: unknown): string {
+function formatGiaTriThayDoi(key: string, v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
+  if (key.startsWith("ngay_") && typeof v === "string") return formatNgay(v);
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }

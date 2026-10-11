@@ -10,6 +10,7 @@ import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
 import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
 import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
 import type { ChangDon, DonThueDetail, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
+import { formatNgay } from "@/lib/formatDate";
 import MoneyInput from "@/components/MoneyInput";
 import EditOrderModal from "./EditOrderModal";
 import OrderLyDoModal from "./OrderLyDoModal";
@@ -342,7 +343,7 @@ function NgayTraThucTeForm({
   return (
     <div className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5 md:col-span-2">
       <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-        Ngày trả thực tế (mặc định theo ngày trả dự kiến {ngayTraDuKien} — chỉnh nếu thiết bị trả sớm/trễ hơn)
+        Ngày trả thực tế (mặc định theo ngày trả dự kiến {formatNgay(ngayTraDuKien)} — chỉnh nếu thiết bị trả sớm/trễ hơn)
       </h3>
       {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
 

@@ -4,6 +4,7 @@ import { getThietBi, layGoiYHangTheoDanhMuc } from "@/lib/actions/thietBi";
 import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
 import { soNgayThueSuDung, soNgayVonDong, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
+import { formatNgay } from "@/lib/formatDate";
 import EquipmentActions from "@/components/equipment/EquipmentActions";
 
 export const dynamic = "force-dynamic";
@@ -105,7 +106,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
         <ul className="text-sm divide-y divide-[var(--border-color)]">
           {lichSuGia.map((g) => (
             <li key={g.id} className="flex justify-between py-1.5">
-              <span>{g.ngay_ap_dung}</span>
+              <span>{formatNgay(g.ngay_ap_dung)}</span>
               <span className="font-semibold">{g.gia_thue.toLocaleString("vi-VN")}đ/ngày</span>
             </li>
           ))}
@@ -118,7 +119,8 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
           {donHang.map((d) => (
             <li key={d.id} className="flex justify-between py-1.5">
               <Link href={`/orders/${d.don_thue.id}`} className="font-semibold text-[var(--accent-primary)] hover:underline">
-                {d.don_thue.khach_hang?.ten} · {d.don_thue.ngay_bat_dau} → {d.ngay_tra_thuc_te || d.don_thue.ngay_tra_du_kien}
+                {d.don_thue.khach_hang?.ten} · {formatNgay(d.don_thue.ngay_bat_dau)} →{" "}
+                {formatNgay(d.ngay_tra_thuc_te || d.don_thue.ngay_tra_du_kien)}
               </Link>
               <span className="text-[var(--text-muted)]">{d.don_thue.chang}</span>
             </li>
@@ -133,7 +135,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
           {kiemTra.map((k) => (
             <li key={k.id} className="flex justify-between items-center py-1.5">
               <span>
-                {k.ngay_tra} {k.nguoi_kiem && `· ${k.nguoi_kiem}`}
+                {formatNgay(k.ngay_tra)} {k.nguoi_kiem && `· ${k.nguoi_kiem}`}
               </span>
               <span className={`badge ${TINH_TRANG_BADGE[k.tinh_trang]}`}>{TINH_TRANG_LABEL[k.tinh_trang]}</span>
             </li>

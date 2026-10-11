@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import { layBaoCaoThietBi } from "@/lib/queries/baoCao";
+import { formatNgay } from "@/lib/formatDate";
 import KhoangThoiGianForm from "@/components/reports/KhoangThoiGianForm";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +63,7 @@ export default async function ReportsPage({
           <KhoangThoiGianForm tuNgay={tuNgay} denNgay={denNgay} dangChon={preset === "tuy_chon"} />
         </div>
         <div className="text-xs text-[var(--text-muted)] font-mono">
-          {tuNgay} → {denNgay}
+          {formatNgay(tuNgay)} → {formatNgay(denNgay)}
         </div>
       </div>
 
