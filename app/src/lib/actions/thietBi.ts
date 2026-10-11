@@ -79,6 +79,7 @@ export interface DauVaoThietBi {
   nguon_goc: NguonGoc;
   nha_cung_cap_id?: string;
   gia_von?: number;
+  gia_mua?: number;
   mo_ta?: string;
   anh_url?: string;
   gia_thue: number;
@@ -99,6 +100,7 @@ export async function createThietBi(input: DauVaoThietBi) {
       nguon_goc: input.nguon_goc,
       nha_cung_cap_id: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap_id || null : null,
       gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
+      gia_mua: input.nguon_goc === "so_huu" ? input.gia_mua ?? null : null,
       mo_ta: input.mo_ta || null,
       anh_url: input.anh_url || null,
     })
@@ -123,6 +125,7 @@ export interface DauVaoSuaThietBi {
   nguon_goc: NguonGoc;
   nha_cung_cap_id?: string;
   gia_von?: number;
+  gia_mua?: number;
   mo_ta?: string;
   anh_url?: string;
   gia_thue: number;
@@ -143,6 +146,7 @@ export async function suaThietBi(id: string, input: DauVaoSuaThietBi, giaHienHan
       nguon_goc: input.nguon_goc,
       nha_cung_cap_id: input.nguon_goc === "thue_ngoai" ? input.nha_cung_cap_id || null : null,
       gia_von: input.nguon_goc === "thue_ngoai" ? input.gia_von : null,
+      gia_mua: input.nguon_goc === "so_huu" ? input.gia_mua ?? null : null,
       mo_ta: input.mo_ta || null,
       anh_url: input.anh_url || null,
     })

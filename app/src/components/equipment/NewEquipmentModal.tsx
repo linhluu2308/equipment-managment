@@ -25,6 +25,7 @@ export default function NewEquipmentModal({
   const [nguonGoc, setNguonGoc] = useState<NguonGoc>("so_huu");
   const [nhaCungCapId, setNhaCungCapId] = useState("");
   const [giaVon, setGiaVon] = useState("");
+  const [giaMua, setGiaMua] = useState("");
   const [giaThue, setGiaThue] = useState("");
   const [moTa, setMoTa] = useState("");
   const [dangGui, setDangGui] = useState(false);
@@ -45,6 +46,7 @@ export default function NewEquipmentModal({
         nguon_goc: nguonGoc,
         nha_cung_cap_id: nhaCungCapId || undefined,
         gia_von: giaVon ? Number(giaVon) : undefined,
+        gia_mua: giaMua ? Number(giaMua) : undefined,
         gia_thue: Number(giaThue),
         mo_ta: moTa || undefined,
       });
@@ -84,6 +86,14 @@ export default function NewEquipmentModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <SupplierSelect danhSach={danhSachNhaCungCap} value={nhaCungCapId} onChange={setNhaCungCapId} />
               <MoneyInput placeholder="Giá vốn/ngày (VND)" value={giaVon} onChange={setGiaVon} />
+            </div>
+          )}
+          {nguonGoc === "so_huu" && (
+            <div>
+              <MoneyInput placeholder="Giá vốn — chi phí mua vào (VND)" value={giaMua} onChange={setGiaMua} />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Chỉ chủ xem được thông tin này, không hiện với vai Kho.
+              </p>
             </div>
           )}
           <textarea className="input" rows={2} placeholder="Mô tả" value={moTa} onChange={(e) => setMoTa(e.target.value)} />

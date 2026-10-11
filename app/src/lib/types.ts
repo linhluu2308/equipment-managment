@@ -58,6 +58,7 @@ export interface ThietBi {
   nguon_goc: NguonGoc;
   nha_cung_cap_id: string | null;
   gia_von: number | null;
+  gia_mua: number | null;
   mo_ta: string | null;
   anh_url: string | null;
   trang_thai: TrangThaiThietBi;

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getThietBi, layGoiYHangTheoDanhMuc } from "@/lib/actions/thietBi";
 import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
+import { createClient } from "@/lib/supabase/server";
+import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
 import { soNgayThueSuDung, soNgayVonDong, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
 import { formatNgay } from "@/lib/formatDate";
@@ -22,6 +24,13 @@ const TINH_TRANG_BADGE: Record<string, string> = {
 
 export default async function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const thanhVien = user?.email ? await layThanhVienTheoEmail(user.email) : null;
+  const laChu = thanhVien?.vai === "chu";
+
   const [data, danhSachNhaCungCap, goiYHang] = await Promise.all([
     getThietBi(id).catch(() => null),
     layDanhSachNhaCungCap(),
@@ -95,6 +104,14 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
                 Giá vốn
               </div>
               <div>{(thietBi.gia_von ?? 0).toLocaleString("vi-VN")}đ</div>
+            </div>
+          )}
+          {thietBi.nguon_goc === "so_huu" && laChu && (
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
+                Giá vốn (chi phí mua vào)
+              </div>
+              <div>{thietBi.gia_mua != null ? `${thietBi.gia_mua.toLocaleString("vi-VN")}đ` : "Chưa nhập"}</div>
             </div>
           )}
         </div>
