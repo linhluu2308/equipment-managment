@@ -49,6 +49,7 @@ const DIEU_KHOAN: { tieuDe: string; dong: string[] }[] = [
       "- Vui lòng kiểm tra kỹ thông tin thiết bị và dịch vụ trong báo giá.",
       "- Khách hàng tự trang bị ổ cứng lưu trữ dữ liệu.",
       "- CineB được quyền từ chối không cho sử dụng thiết bị đối với những trường hợp không an toàn cho thiết bị như: tia laser, di chuyển trên sông nước, cháy, nổ, khói lửa… và những trường hợp khác.",
+      "- Đối với thiết bị khách hàng trả lại bị tác động bởi: tia laser, di chuyển trên sông nước, cháy, nổ, khói lửa, va đập mạnh… và những trường hợp khác làm hư tổn trên 30% ngoại hình và bên trong, CineB yêu cầu khách hàng phải bồi hoàn 100% giá trị thực của thiết bị.",
     ],
   },
 ];
