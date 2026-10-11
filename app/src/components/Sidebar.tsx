@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 const LINKS = [
   { href: "/", label: "Tổng quan", icon: "📊" },
   { href: "/orders", label: "Đơn thuê", icon: "📋" },
+  { href: "/customers", label: "Khách hàng", icon: "🧑‍🤝‍🧑" },
   { href: "/equipment", label: "Thiết bị", icon: "🎥" },
   { href: "/calendar", label: "Calendar", icon: "📅" },
   { href: "/reports", label: "Báo cáo", icon: "📈", chuOnly: true },
