@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/admin";
-import { soNgayLogisticsDong, soNgayThueSuDung, soNgayVonDong, thanhTienDong } from "@/lib/calculations";
+import { soNgayLogisticsDong, soNgayVonDong, tienDong } from "@/lib/calculations";
 import type { CoSoTinhGiaVon } from "@/lib/types";
 
 export interface DongBaoCaoThietBi {
@@ -39,7 +39,7 @@ export async function layBaoCaoThietBi(
   const { data: chiTietList, error: e2 } = await supabase
     .from("don_thue_chi_tiet")
     .select(
-      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, tinh_gia_von_theo, don_thue!inner(id, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
+      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, tinh_gia_von_theo, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, don_thue!inner(id, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
     );
   if (e2) throw new Error(e2.message);
 
@@ -54,6 +54,9 @@ export async function layBaoCaoThietBi(
     phan_tram_chiet_khau: number;
     ngay_tra_thuc_te: string | null;
     tinh_gia_von_theo: CoSoTinhGiaVon;
+    ngay_xuat_kho: string | null;
+    ngay_bat_dau_su_dung: string | null;
+    ngay_ket_thuc_su_dung: string | null;
     don_thue: {
       id: string;
       chang: string;
@@ -93,7 +96,7 @@ export async function layBaoCaoThietBi(
     const daXong = cuaThietBi.filter((r) => r.don_thue.chang === "xong");
     const doanhThu = daXong.reduce((sum, r) => {
       donHoanTatIds.add(r.don_thue.id);
-      return sum + thanhTienDong(r, soNgayThueSuDung(r.don_thue));
+      return sum + tienDong(r.don_thue, r);
     }, 0);
     const giaVon = tb.gia_von
       ? daXong.reduce((sum, r) => sum + tb.gia_von! * soNgayVonDong(r.don_thue, r), 0)

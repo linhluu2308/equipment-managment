@@ -31,7 +31,7 @@ export async function kiemTraTrungLich(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("don_thue_chi_tiet")
-    .select("don_thue_id, don_thue!inner(id, ma_don, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien)")
+    .select("don_thue_id, ngay_xuat_kho, don_thue!inner(id, ma_don, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien)")
     .eq("thiet_bi_id", thietBiId);
   if (error) throw new Error(error.message);
 
@@ -47,6 +47,7 @@ export async function kiemTraTrungLich(
 
   type Row = {
     don_thue_id: string;
+    ngay_xuat_kho: string | null;
     don_thue: {
       id: string;
       ma_don: string | null;
@@ -62,7 +63,9 @@ export async function kiemTraTrungLich(
     if (!don || don.id === excludeDonId || don.da_xoa) continue;
     if (don.chang === "xong" || don.chang === "huy") continue;
     if (donDaTraThietBi.has(don.id)) continue;
-    if (!khoangNgayGiao(ngayBatDau, ngayTraDuKien, don.ngay_bat_dau, don.ngay_tra_du_kien)) continue;
+    // Thiết bị thuê thêm giữa chừng chỉ giữ lịch từ ngày giao riêng của nó (migration 0017).
+    const batDauGiu = row.ngay_xuat_kho || don.ngay_bat_dau;
+    if (!khoangNgayGiao(ngayBatDau, ngayTraDuKien, batDauGiu, don.ngay_tra_du_kien)) continue;
 
     if (CHANG_KHOA_CUNG.includes(don.chang)) {
       return { tinhTrang: "khoa_cung", donTrung: { id: don.id, ma_don: don.ma_don, chang: don.chang } };
@@ -144,13 +147,6 @@ export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: str
   redirect(`/orders/${donId}`);
 }
 
-export async function xoaThietBiKhoiDon(chiTietId: string, donId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("don_thue_chi_tiet").delete().eq("id", chiTietId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/orders/${donId}`);
-}
-
 export interface DauVaoSuaDonThue {
   khachHang: { ten: string; so_dien_thoai: string; nguoi_gioi_thieu?: string };
   ngay_bat_dau: string;
@@ -206,7 +202,7 @@ export async function suaDonThue(
   const { data: donCu, error: eDon } = await supabase
     .from("don_thue")
     .select(
-      "khach_hang_id, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, ghi_chu, khach_hang(ten, so_dien_thoai, nguoi_gioi_thieu), don_thue_chi_tiet(id, gia_thue_chot, phan_tram_chiet_khau)"
+      "khach_hang_id, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, ghi_chu, khach_hang(ten, so_dien_thoai, nguoi_gioi_thieu), don_thue_chi_tiet(id, gia_thue_chot, phan_tram_chiet_khau, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
     )
     .eq("id", donId)
     .single();
@@ -220,9 +216,30 @@ export async function suaDonThue(
     ngay_ket_thuc_su_dung: string;
     ghi_chu: string | null;
     khach_hang: { ten: string; so_dien_thoai: string; nguoi_gioi_thieu: string | null } | null;
-    don_thue_chi_tiet: { id: string; gia_thue_chot: number; phan_tram_chiet_khau: number }[];
+    don_thue_chi_tiet: {
+      id: string;
+      gia_thue_chot: number;
+      phan_tram_chiet_khau: number;
+      ngay_xuat_kho: string | null;
+      ngay_bat_dau_su_dung: string | null;
+      ngay_ket_thuc_su_dung: string | null;
+    }[];
   };
   const cu = donCu as unknown as DonCu;
+
+  // Thiết bị thuê thêm/trả sớm có ngày riêng — ngày mới của đơn phải còn bao trọn các
+  // ngày riêng đó, không thì số ngày tính tiền của thiết bị sẽ âm/vượt khoảng đơn.
+  for (const l of cu.don_thue_chi_tiet) {
+    if (l.ngay_xuat_kho && (l.ngay_xuat_kho < input.ngay_bat_dau || l.ngay_xuat_kho > input.ngay_tra_du_kien)) {
+      return { error: "Có thiết bị thuê thêm với ngày giao riêng nằm ngoài khoảng ngày mới của đơn." };
+    }
+    if (l.ngay_bat_dau_su_dung && l.ngay_bat_dau_su_dung > input.ngay_ket_thuc_su_dung) {
+      return { error: "Có thiết bị thuê thêm bắt đầu sử dụng sau ngày kết thúc sử dụng mới của đơn." };
+    }
+    if (l.ngay_ket_thuc_su_dung && l.ngay_ket_thuc_su_dung < input.ngay_bat_dau_su_dung) {
+      return { error: "Có thiết bị trả sớm kết thúc sử dụng trước ngày bắt đầu sử dụng mới của đơn." };
+    }
+  }
 
   if (input.ngay_bat_dau !== cu.ngay_bat_dau || input.ngay_tra_du_kien !== cu.ngay_tra_du_kien) {
     // kiemTraTrungLich cần thiet_bi_id, không phải chi_tiet id — lấy lại từ DB.
@@ -508,14 +525,20 @@ export async function capNhatNgayTraThucTeDong(
 }
 
 /**
- * Áp dụng cùng 1 ngày trả thực tế cho TẤT CẢ thiết bị trong đơn — tiện cho
+ * Áp dụng cùng 1 ngày trả thực tế cho các thiết bị CHƯA trả trong đơn — tiện cho
  * trường hợp cả đơn trả cùng lúc, đỡ phải nhập từng dòng.
  */
 export async function apDungNgayTraThucTeChoTatCa(donId: string, ngay: string): Promise<{ error?: string }> {
   const loi = await kiemTraDuocSuaNgayTra(donId, ngay);
   if (loi) return { error: loi };
 
-  const { error } = await createClient().from("don_thue_chi_tiet").update({ ngay_tra_thuc_te: ngay }).eq("don_thue_id", donId);
+  // Bỏ qua thiết bị đã kiểm tra trả (vd đã trả sớm) — không đè ngày trả riêng của chúng.
+  const supabase = createClient();
+  const { data: daTra } = await supabase.from("kiem_tra_tinh_trang").select("thiet_bi_id").eq("don_thue_id", donId);
+  let q = supabase.from("don_thue_chi_tiet").update({ ngay_tra_thuc_te: ngay }).eq("don_thue_id", donId);
+  const idsDaTra = (daTra ?? []).map((k) => k.thiet_bi_id);
+  if (idsDaTra.length > 0) q = q.not("thiet_bi_id", "in", `(${idsDaTra.join(",")})`);
+  const { error } = await q;
   if (error) return { error: error.message };
   revalidatePath(`/orders/${donId}`);
   return {};
@@ -598,7 +621,7 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon): Promise
  * trong đơn: nợ = gia_von (VND/ngày) × số ngày tính giá vốn của riêng thiết bị đó.
  * Tuỳ tinh_gia_von_theo trên dòng chi tiết: 'ngay_di_chuyen' (mặc định) = số ngày
  * logistics (ngay_bat_dau → ngay_tra_thuc_te/ngay_tra_du_kien), hoặc 'ngay_su_dung'
- * = đúng số ngày khách sử dụng của cả đơn — tuỳ quy ước tính tiền của từng NCC. Dùng
+ * = đúng số ngày khách sử dụng thiết bị đó — tuỳ quy ước tính tiền của từng NCC. Dùng
  * upsert + ignoreDuplicates trên unique(don_thue_id, thiet_bi_id) để không ghi
  * trùng nếu chuyenChangDon() lỡ chạy lại cho cùng 1 đơn.
  */
@@ -614,7 +637,9 @@ async function phatSinhCongNoNccChoDon(donId: string) {
 
   const { data: chiTiet, error: eChiTiet } = await supabase
     .from("don_thue_chi_tiet")
-    .select("thiet_bi_id, ngay_tra_thuc_te, tinh_gia_von_theo, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)")
+    .select(
+      "thiet_bi_id, ngay_tra_thuc_te, tinh_gia_von_theo, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, thiet_bi(nguon_goc, nha_cung_cap_id, gia_von)"
+    )
     .eq("don_thue_id", donId);
   if (eChiTiet) throw new Error(eChiTiet.message);
 
@@ -622,6 +647,9 @@ async function phatSinhCongNoNccChoDon(donId: string) {
     thiet_bi_id: string;
     ngay_tra_thuc_te: string | null;
     tinh_gia_von_theo: CoSoTinhGiaVon;
+    ngay_xuat_kho: string | null;
+    ngay_bat_dau_su_dung: string | null;
+    ngay_ket_thuc_su_dung: string | null;
     thiet_bi: { nguon_goc: string; nha_cung_cap_id: string | null; gia_von: number | null } | null;
   };
 

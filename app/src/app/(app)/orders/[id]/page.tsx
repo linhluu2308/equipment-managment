@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDonThue, getLichSuThayDoiDon } from "@/lib/actions/donThue";
 import { CHANG_LABEL, HANH_DONG_LABEL, LOAI_THANH_TOAN_LABEL, type DonThueDetail } from "@/lib/types";
-import { soNgayThue, soNgayThueSuDung, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
+import { khoangSuDungDong, soNgayThue, soNgaySuDungDong, soNgayThueSuDung, tienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import { formatNgay, formatNgayGio } from "@/lib/formatDate";
 import OrderActions from "@/components/orders/OrderActions";
-import RemoveLineButton from "@/components/orders/RemoveLineButton";
+import DongThietBiActions, { ThemThietBiButton } from "@/components/orders/ThietBiTrongDonActions";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
 import ThanhToanChuActions from "@/components/orders/ThanhToanChuActions";
 
@@ -88,7 +88,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </section>
 
       <section className="card">
-        <div className="card-title">Thiết bị thuê</div>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="card-title !mb-0">Thiết bị thuê</div>
+          <ThemThietBiButton don={don} />
+        </div>
         <div className="table-container" style={{ border: "none", boxShadow: "none" }}>
           <table>
             <thead>
@@ -109,6 +112,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     <td>
                       <span className="font-semibold">{l.thiet_bi?.ten}</span>{" "}
                       {l.thiet_bi?.ma && <span className="text-[var(--text-muted)] font-mono text-xs">· {l.thiet_bi.ma}</span>}
+                      <GhiChuNgayRieng don={don} line={l} />
                     </td>
                     <td>{l.gia_thue_chot.toLocaleString("vi-VN")}đ</td>
                     <td>
@@ -120,11 +124,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                         </span>
                       )}
                     </td>
-                    <td>{soNgaySuDung}</td>
+                    <td>{soNgaySuDungDong(don, l)}</td>
                     <td>{l.phan_tram_chiet_khau}%</td>
-                    <td className="font-semibold">{thanhTienDong(l, soNgaySuDung).toLocaleString("vi-VN")}đ</td>
+                    <td className="font-semibold">{tienDong(don, l).toLocaleString("vi-VN")}đ</td>
                     <td className="text-right">
-                      {don.chang === "yeu_cau" && <RemoveLineButton chiTietId={l.id} donId={don.id} />}
+                      <DongThietBiActions don={don} line={l} />
                     </td>
                   </tr>
                 );
@@ -257,7 +261,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   <span className="text-xs text-[var(--text-muted)]">{formatNgayGio(nk.created_at)}</span>
                 </div>
                 <p className="mt-1 text-[var(--text-muted)]">Lý do: {nk.ly_do}</p>
-                {nk.hanh_dong === "xoa_thanh_toan" && nk.du_lieu_cu ? (
+                {nk.hanh_dong === "xoa_thiet_bi" && nk.du_lieu_cu ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Đã bỏ: {String(nk.du_lieu_cu.thiet_bi ?? "—")} · {formatGiaTriThayDoi("so_tien", nk.du_lieu_cu.so_tien)}
+                  </p>
+                ) : nk.hanh_dong === "xoa_thanh_toan" && nk.du_lieu_cu ? (
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
                     Giao dịch đã xoá: {formatGiaTriThayDoi("loai", nk.du_lieu_cu.loai)} ·{" "}
                     {formatGiaTriThayDoi("so_tien", nk.du_lieu_cu.so_tien)} · {formatGiaTriThayDoi("ngay_thu", nk.du_lieu_cu.ngay_thu)}
@@ -269,7 +277,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     <ul className="mt-1 space-y-0.5 text-xs text-[var(--text-muted)]">
                       {Object.keys(nk.du_lieu_moi).map((key) => (
                         <li key={key}>
-                          <span className="font-mono">{key}</span>: {formatGiaTriThayDoi(key, nk.du_lieu_cu?.[key])} →{" "}
+                          <span className="font-mono">{key}</span>:{" "}
+                          {nk.du_lieu_cu && key in nk.du_lieu_cu && `${formatGiaTriThayDoi(key, nk.du_lieu_cu[key])} → `}
                           {formatGiaTriThayDoi(key, nk.du_lieu_moi?.[key])}
                         </li>
                       ))}
@@ -295,6 +304,19 @@ function formatGiaTriThayDoi(key: string, v: unknown): string {
     return LOAI_THANH_TOAN_LABEL[v as keyof typeof LOAI_THANH_TOAN_LABEL];
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
+}
+
+/** Ghi chú dưới tên thiết bị khi dòng có ngày riêng: giao thêm giữa chừng / trả sớm. */
+function GhiChuNgayRieng({ don, line }: { don: DonThueDetail; line: DonThueDetail["don_thue_chi_tiet"][number] }) {
+  if (!line.ngay_xuat_kho && !line.ngay_bat_dau_su_dung && !line.ngay_ket_thuc_su_dung) return null;
+  const { tu, den } = khoangSuDungDong(don, line);
+  return (
+    <div className="mt-0.5 text-xs text-[var(--text-muted)]">
+      {line.ngay_xuat_kho && <span className="badge badge-info mr-1">Giao thêm {formatNgay(line.ngay_xuat_kho)}</span>}
+      {line.ngay_ket_thuc_su_dung && <span className="badge badge-warning mr-1">Trả sớm</span>}
+      Tính tiền {formatNgay(tu)} → {formatNgay(den)}
+    </div>
+  );
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {

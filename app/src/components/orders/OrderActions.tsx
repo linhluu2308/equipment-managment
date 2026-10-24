@@ -550,7 +550,7 @@ function NgayTraThucTeForm({
           onChange={(e) => setNgayApDungTatCa(e.target.value)}
         />
         <button type="button" disabled={pendingTatCa} className="btn-secondary" onClick={apDungTatCa}>
-          {pendingTatCa ? "Đang lưu..." : "Áp dụng cho tất cả thiết bị"}
+          {pendingTatCa ? "Đang lưu..." : "Áp dụng cho các thiết bị chưa trả"}
         </button>
       </div>
 

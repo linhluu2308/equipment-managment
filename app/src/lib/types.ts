@@ -118,7 +118,15 @@ export interface DonThue {
   updated_at: string;
 }
 
-export type HanhDongThayDoiDon = "sua" | "xoa" | "khoi_phuc" | "sua_thanh_toan" | "xoa_thanh_toan";
+export type HanhDongThayDoiDon =
+  | "sua"
+  | "xoa"
+  | "khoi_phuc"
+  | "sua_thanh_toan"
+  | "xoa_thanh_toan"
+  | "them_thiet_bi"
+  | "xoa_thiet_bi"
+  | "tra_som_thiet_bi";
 
 export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   sua: "Sửa đơn",
@@ -126,6 +134,9 @@ export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   khoi_phuc: "Khôi phục đơn",
   sua_thanh_toan: "Sửa giao dịch thanh toán",
   xoa_thanh_toan: "Xoá giao dịch thanh toán",
+  them_thiet_bi: "Thêm thiết bị",
+  xoa_thiet_bi: "Bỏ thiết bị khỏi đơn",
+  tra_som_thiet_bi: "Trả sớm thiết bị",
 };
 
 export const LOAI_THANH_TOAN_LABEL: Record<LoaiThanhToan, string> = {
@@ -155,6 +166,10 @@ export interface DonThueChiTiet {
   phan_tram_chiet_khau: number;
   ngay_tra_thuc_te: string | null;
   tinh_gia_von_theo: CoSoTinhGiaVon;
+  /** Ngày riêng của dòng thiết bị (migration 0017) — NULL = dùng theo ngày của cả đơn. */
+  ngay_xuat_kho: string | null;
+  ngay_bat_dau_su_dung: string | null;
+  ngay_ket_thuc_su_dung: string | null;
   created_at: string;
 }
 

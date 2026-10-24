@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { soNgayThue, thanhTienDong } from "@/lib/calculations";
+import { soNgayThue, soNgaySuDungDong, thanhTienDong } from "@/lib/calculations";
 import { formatNgay } from "@/lib/formatDate";
 import type { ChangDon } from "@/lib/types";
 
 type DonChiTiet = {
   gia_thue_chot: number;
   phan_tram_chiet_khau: number;
+  ngay_bat_dau_su_dung?: string | null;
+  ngay_ket_thuc_su_dung?: string | null;
   thiet_bi: { ten: string; ma: string | null } | null;
 };
 
@@ -47,13 +49,20 @@ export default function XuatBaoGiaButton({
       ]);
 
       const soNgay = soNgayThue(ngayBatDauSuDung, ngayKetThucSuDung);
-      const dong = chiTiet.map((l) => ({
-        ten: l.thiet_bi?.ten ?? "Thiết bị",
-        ma: l.thiet_bi?.ma ?? null,
-        donGia: l.gia_thue_chot,
-        chietKhauPhanTram: l.phan_tram_chiet_khau,
-        thanhTien: thanhTienDong(l, soNgay),
-      }));
+      const dong = chiTiet.map((l) => {
+        const soNgayDong = soNgaySuDungDong(
+          { ngay_bat_dau_su_dung: ngayBatDauSuDung, ngay_ket_thuc_su_dung: ngayKetThucSuDung },
+          l
+        );
+        return {
+          ten: l.thiet_bi?.ten ?? "Thiết bị",
+          ma: l.thiet_bi?.ma ?? null,
+          donGia: l.gia_thue_chot,
+          chietKhauPhanTram: l.phan_tram_chiet_khau,
+          soNgay: soNgayDong,
+          thanhTien: thanhTienDong(l, soNgayDong),
+        };
+      });
 
       const blob = await pdf(
         <BaoGiaDocument

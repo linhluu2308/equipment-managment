@@ -5,7 +5,7 @@ import { layDanhSachNhaCungCap } from "@/lib/queries/nhaCungCap";
 import { createClient } from "@/lib/supabase/server";
 import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import { TRANG_THAI_THIET_BI_BADGE, TRANG_THAI_THIET_BI_LABEL, type TrangThaiThietBi } from "@/lib/types";
-import { soNgayThueSuDung, soNgayVonDong, thanhTienDong, loiNhuanThietBi } from "@/lib/calculations";
+import { soNgayVonDong, tienDong, loiNhuanThietBi } from "@/lib/calculations";
 import { formatNgay } from "@/lib/formatDate";
 import EquipmentActions from "@/components/equipment/EquipmentActions";
 
@@ -42,7 +42,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
   const giaHienHanh = lichSuGia[0]?.gia_thue ?? 0;
 
   const donXong = donHang.filter((d) => d.don_thue?.chang === "xong");
-  const doanhThu = donXong.reduce((sum, d) => sum + thanhTienDong(d, soNgayThueSuDung(d.don_thue)), 0);
+  const doanhThu = donXong.reduce((sum, d) => sum + tienDong(d.don_thue, d), 0);
   const giaVonTong = thietBi.gia_von
     ? donXong.reduce((sum, d) => sum + thietBi.gia_von! * soNgayVonDong(d.don_thue, d), 0)
     : 0;

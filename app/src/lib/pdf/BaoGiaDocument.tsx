@@ -113,6 +113,8 @@ export interface DongThietBiBaoGia {
   ma: string | null;
   donGia: number;
   chietKhauPhanTram: number;
+  /** Số ngày tính tiền của riêng thiết bị này (thuê thêm/trả sớm có thể khác cả đơn). */
+  soNgay: number;
   thanhTien: number;
 }
 
@@ -180,7 +182,7 @@ export default function BaoGiaDocument({
             <Text style={s.giaTri}>
               {ngayBatDauSuDung} → {ngayKetThucSuDung}
             </Text>
-            <Text style={s.nhan}>Số ngày tính tiền</Text>
+            <Text style={s.nhan}>Số ngày sử dụng của đơn</Text>
             <Text style={s.giaTri}>{soNgay} ngày</Text>
           </View>
         </View>
@@ -200,7 +202,7 @@ export default function BaoGiaDocument({
                 {d.ma ? ` (${d.ma})` : ""}
               </Text>
               <Text style={[s.td, s.colDonGia]}>{tienVnd(d.donGia)}</Text>
-              <Text style={[s.td, s.colSoNgay]}>{soNgay}</Text>
+              <Text style={[s.td, s.colSoNgay]}>{d.soNgay}</Text>
               <Text style={[s.td, s.colChietKhau]}>{d.chietKhauPhanTram > 0 ? `${d.chietKhauPhanTram}%` : "—"}</Text>
               <Text style={[s.td, s.colThanhTien]}>{tienVnd(d.thanhTien)}</Text>
             </View>

@@ -6,6 +6,18 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
 import type { HanhDongThayDoiDon } from "@/lib/types";
 
+/** Thành viên đang đăng nhập (mọi vai) — dùng cho thao tác ai cũng làm được nhưng vẫn cần ghi nhật ký. */
+export async function nguoiDungHienTai(): Promise<{ ten: string; email: string; laChu: boolean }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error("Chưa đăng nhập.");
+  const tv = await layThanhVienTheoEmail(user.email);
+  if (!tv) throw new Error("Bạn không có quyền truy cập.");
+  return { ten: tv.ten, email: user.email, laChu: tv.vai === "chu" };
+}
+
 /**
  * Xác thực người gọi đang đăng nhập và có vai "chu" — dùng cho mọi Server Action
  * sửa/xoá/khôi phục đơn. RLS đang tắt toàn app (xem 0001_init.sql) nên đây là lớp

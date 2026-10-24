@@ -62,6 +62,24 @@ export async function capNhatTrangThaiTheoBienBanCuaDon(donId: string) {
   for (const k of data ?? []) await capNhatTrangThaiSauKiemTra(donId, k.thiet_bi_id, k.tinh_trang as TinhTrangThietBi);
 }
 
+/** Thiết bị thuê thêm khi đơn đang ở chặng "Đã giao": chuyển sang "Đang thuê" ngay (bỏ qua thiết bị đã thanh lý). */
+export async function datDangThue(thietBiIds: string[]) {
+  if (thietBiIds.length === 0) return;
+  const { error } = await createClient()
+    .from("thiet_bi")
+    .update({ trang_thai: "dang_thue" })
+    .in("id", thietBiIds)
+    .neq("trang_thai", "thanh_ly");
+  if (error) throw new Error(`Cập nhật trạng thái thiết bị thất bại: ${error.message}`);
+}
+
+/** Bỏ 1 thiết bị khỏi đơn đang giao: nhả về "Sẵn sàng" nếu đang "Đang thuê" và không bị đơn khác giữ. */
+export async function nhaMotThietBi(donId: string, thietBiId: string) {
+  if ((await layTrangThai(thietBiId)) !== "dang_thue") return;
+  if (await dangBiDonKhacGiu(thietBiId, donId)) return;
+  await datTrangThai(thietBiId, "san_sang");
+}
+
 /**
  * Huỷ/xoá đơn: nhả các thiết bị CHƯA kiểm tra trả của đơn về "Sẵn sàng" — chỉ khi đang
  * "Đang thuê" và không bị đơn khác giữ (không đè trạng thái Hỏng/Thanh lý đặt tay).
