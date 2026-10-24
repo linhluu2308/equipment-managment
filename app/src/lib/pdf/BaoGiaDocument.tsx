@@ -112,7 +112,8 @@ export interface DongThietBiBaoGia {
   ten: string;
   ma: string | null;
   donGia: number;
-  chietKhauPhanTram: number;
+  /** Đã định dạng sẵn: "10%", "−100.000đ/ngày" hoặc "—". */
+  chietKhau: string;
   /** Số ngày tính tiền của riêng thiết bị này (thuê thêm/trả sớm có thể khác cả đơn). */
   soNgay: number;
   thanhTien: number;
@@ -129,6 +130,8 @@ export interface BaoGiaProps {
   ngayKetThucSuDung: string;
   soNgay: number;
   dong: DongThietBiBaoGia[];
+  /** Giảm giá chung cho cả đơn (đ), trừ trước khi tính VAT. */
+  giamGiaDon: number;
 }
 
 export default function BaoGiaDocument({
@@ -142,10 +145,13 @@ export default function BaoGiaDocument({
   ngayKetThucSuDung,
   soNgay,
   dong,
+  giamGiaDon,
 }: BaoGiaProps) {
   const tienThietBi = dong.reduce((sum, d) => sum + d.thanhTien, 0);
-  const tienVat = (tienThietBi * VAT_PHAN_TRAM) / 100;
-  const tongCong = tienThietBi + tienVat;
+  const giam = Math.min(giamGiaDon, tienThietBi);
+  const tienSauGiam = tienThietBi - giam;
+  const tienVat = (tienSauGiam * VAT_PHAN_TRAM) / 100;
+  const tongCong = tienSauGiam + tienVat;
 
   return (
     <Document title={`Bao gia ${maDon}`}>
@@ -203,7 +209,7 @@ export default function BaoGiaDocument({
               </Text>
               <Text style={[s.td, s.colDonGia]}>{tienVnd(d.donGia)}</Text>
               <Text style={[s.td, s.colSoNgay]}>{d.soNgay}</Text>
-              <Text style={[s.td, s.colChietKhau]}>{d.chietKhauPhanTram > 0 ? `${d.chietKhauPhanTram}%` : "—"}</Text>
+              <Text style={[s.td, s.colChietKhau]}>{d.chietKhau}</Text>
               <Text style={[s.td, s.colThanhTien]}>{tienVnd(d.thanhTien)}</Text>
             </View>
           ))}
@@ -214,6 +220,12 @@ export default function BaoGiaDocument({
             <Text style={s.tongNhan}>Tổng tiền thiết bị (chưa VAT)</Text>
             <Text style={s.tongGiaTri}>{tienVnd(tienThietBi)}</Text>
           </View>
+          {giam > 0 && (
+            <View style={s.tongDong}>
+              <Text style={s.tongNhan}>Giảm giá cả đơn</Text>
+              <Text style={s.tongGiaTri}>−{tienVnd(giam)}</Text>
+            </View>
+          )}
           <View style={s.tongDong}>
             <Text style={s.tongNhan}>VAT ({VAT_PHAN_TRAM}%)</Text>
             <Text style={s.tongGiaTri}>{tienVnd(tienVat)}</Text>

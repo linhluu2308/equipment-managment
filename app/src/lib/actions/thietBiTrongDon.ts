@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/admin";
 import { ghiNhatKyThayDoiDon, nguoiDungHienTai } from "@/lib/quyenVaNhatKy";
 import { kiemTraTrungLich } from "@/lib/actions/donThue";
-import { khoangSuDungDong, ngayXuatKhoDong, soNgaySuDungDong, tienDong } from "@/lib/calculations";
+import { khoangSuDungDong, loiChietKhau, ngayXuatKhoDong, soNgaySuDungDong, tienDong } from "@/lib/calculations";
 import { capNhatTrangThaiSauKiemTra, datDangThue, nhaMotThietBi } from "@/lib/trangThaiThietBi";
 import type { ChangDon, CoSoTinhGiaVon, HanhDongThayDoiDon, TinhTrangThietBi } from "@/lib/types";
 
@@ -67,7 +67,13 @@ function revalidateDon(donId: string) {
 }
 
 export interface DauVaoThemThietBi {
-  thietBi: { thiet_bi_id: string; gia_thue_chot: number; phan_tram_chiet_khau: number; tinh_gia_von_theo?: CoSoTinhGiaVon }[];
+  thietBi: {
+    thiet_bi_id: string;
+    gia_thue_chot: number;
+    phan_tram_chiet_khau: number;
+    tien_chiet_khau_ngay?: number;
+    tinh_gia_von_theo?: CoSoTinhGiaVon;
+  }[];
   /** Chỉ dùng khi đơn đã giao: ngày giao thêm và ngày bắt đầu tính tiền của các thiết bị thêm. */
   ngay_giao?: string;
   ngay_bat_dau_su_dung?: string;
@@ -83,7 +89,8 @@ export async function themThietBiVaoDon(donId: string, input: DauVaoThemThietBi)
   if (input.thietBi.length === 0) return { error: "Cần chọn ít nhất một thiết bị." };
   for (const tb of input.thietBi) {
     if (!tb.gia_thue_chot || tb.gia_thue_chot <= 0) return { error: "Giá thuê phải lớn hơn 0." };
-    if (tb.phan_tram_chiet_khau < 0 || tb.phan_tram_chiet_khau > 100) return { error: "Chiết khấu phải nằm trong khoảng 0–100%." };
+    const loiCk = loiChietKhau(tb);
+    if (loiCk) return { error: loiCk };
   }
 
   const don = await layDon(donId);
@@ -138,6 +145,7 @@ export async function themThietBiVaoDon(donId: string, input: DauVaoThemThietBi)
     thiet_bi_id: tb.thiet_bi_id,
     gia_thue_chot: tb.gia_thue_chot,
     phan_tram_chiet_khau: tb.phan_tram_chiet_khau,
+    tien_chiet_khau_ngay: tb.tien_chiet_khau_ngay ?? 0,
     tinh_gia_von_theo: tb.tinh_gia_von_theo ?? "ngay_di_chuyen",
     ngay_xuat_kho: ngayXuatKho,
     ngay_bat_dau_su_dung: ngayBatDauSuDung,

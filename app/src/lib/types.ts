@@ -111,6 +111,8 @@ export interface DonThue {
   ngay_bat_dau_su_dung: string;
   ngay_ket_thuc_su_dung: string;
   ghi_chu: string | null;
+  /** Giảm giá chung cho cả đơn (đ), trừ vào tổng tiền thiết bị — migration 0018. */
+  giam_gia_don: number;
   da_xoa: boolean;
   xoa_luc: string | null;
   xoa_boi: string | null;
@@ -164,6 +166,8 @@ export interface DonThueChiTiet {
   thiet_bi_id: string;
   gia_thue_chot: number;
   phan_tram_chiet_khau: number;
+  /** Chiết khấu số tiền trừ vào giá MỖI NGÀY (đ) — dùng thay cho % (chỉ 1 trong 2 > 0), migration 0018. */
+  tien_chiet_khau_ngay: number;
   ngay_tra_thuc_te: string | null;
   tinh_gia_von_theo: CoSoTinhGiaVon;
   /** Ngày riêng của dòng thiết bị (migration 0017) — NULL = dùng theo ngày của cả đơn. */

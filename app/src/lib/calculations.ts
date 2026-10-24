@@ -79,28 +79,67 @@ export function soNgayVonDong(
   return line.tinh_gia_von_theo === "ngay_su_dung" ? soNgaySuDungDong(don, line) : soNgayLogisticsDong(don, line);
 }
 
-export function thanhTienDong(
-  line: Pick<DonThueChiTiet, "gia_thue_chot" | "phan_tram_chiet_khau">,
-  soNgay: number
-): number {
-  const goc = line.gia_thue_chot * soNgay;
-  return goc - (goc * line.phan_tram_chiet_khau) / 100;
+/**
+ * Chiết khấu của 1 dòng: % (cũ) HOẶC số tiền trừ vào giá mỗi ngày (migration 0018).
+ * tien_chiet_khau_ngay optional để các select cũ thiếu cột vẫn tính như chiết khấu %.
+ */
+export type ChietKhauDong = Pick<DonThueChiTiet, "gia_thue_chot" | "phan_tram_chiet_khau"> &
+  Partial<Pick<DonThueChiTiet, "tien_chiet_khau_ngay">>;
+
+/** Giá mỗi ngày sau chiết khấu của 1 thiết bị. */
+export function donGiaSauChietKhau(line: ChietKhauDong): number {
+  const tien = line.tien_chiet_khau_ngay ?? 0;
+  if (tien > 0) return Math.max(0, line.gia_thue_chot - tien);
+  return line.gia_thue_chot - (line.gia_thue_chot * line.phan_tram_chiet_khau) / 100;
+}
+
+/** Hiển thị chiết khấu của dòng: "10%", "−100.000đ/ngày" hoặc "—". */
+export function moTaChietKhau(line: ChietKhauDong): string {
+  const tien = line.tien_chiet_khau_ngay ?? 0;
+  if (tien > 0) return `−${tien.toLocaleString("vi-VN")}đ/ngày`;
+  return line.phan_tram_chiet_khau > 0 ? `${line.phan_tram_chiet_khau}%` : "—";
+}
+
+/** Kiểm tra chiết khấu hợp lệ — dùng chung client/server. Trả về câu lỗi hoặc null. */
+export function loiChietKhau(line: ChietKhauDong): string | null {
+  const tien = line.tien_chiet_khau_ngay ?? 0;
+  if (line.phan_tram_chiet_khau < 0 || line.phan_tram_chiet_khau > 100) return "Chiết khấu % phải nằm trong khoảng 0–100%.";
+  if (tien < 0) return "Chiết khấu số tiền không được âm.";
+  if (tien > line.gia_thue_chot) return "Chiết khấu số tiền không được lớn hơn giá thuê mỗi ngày.";
+  if (tien > 0 && line.phan_tram_chiet_khau > 0) return "Mỗi thiết bị chỉ chọn một kiểu chiết khấu: % hoặc số tiền.";
+  return null;
+}
+
+export function thanhTienDong(line: ChietKhauDong, soNgay: number): number {
+  return donGiaSauChietKhau(line) * soNgay;
 }
 
 /** Thành tiền của MỘT thiết bị theo đúng số ngày riêng của nó. */
 export function tienDong(
   don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung">,
-  line: Pick<DonThueChiTiet, "gia_thue_chot" | "phan_tram_chiet_khau"> & NgayRiengDong
+  line: ChietKhauDong & NgayRiengDong
 ): number {
   return thanhTienDong(line, soNgaySuDungDong(don, line));
 }
 
+/** Tổng tiền thiết bị của đơn, CHƯA trừ giảm giá cả đơn. */
+export function tongTienThietBi(
+  lines: (ChietKhauDong & NgayRiengDong)[],
+  don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung">
+): number {
+  return lines.reduce((sum, l) => sum + tienDong(don, l), 0);
+}
+
+/**
+ * Tổng tiền khách phải trả = tiền thiết bị − giảm giá cả đơn + chi phí phát sinh.
+ * Giảm giá đơn không làm tiền thiết bị âm (vd sau khi trả sớm làm tiền thiết bị nhỏ lại).
+ */
 export function tongTienDon(
-  lines: (Pick<DonThueChiTiet, "gia_thue_chot" | "phan_tram_chiet_khau"> & NgayRiengDong)[],
-  don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung">,
+  lines: (ChietKhauDong & NgayRiengDong)[],
+  don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung"> & Partial<Pick<DonThue, "giam_gia_don">>,
   chiPhiList: Pick<ChiPhi, "so_tien">[] = []
 ): number {
-  const tienThietBi = lines.reduce((sum, l) => sum + tienDong(don, l), 0);
+  const tienThietBi = Math.max(0, tongTienThietBi(lines, don) - (don.giam_gia_don ?? 0));
   const tongChiPhi = chiPhiList.reduce((sum, c) => sum + c.so_tien, 0);
   return tienThietBi + tongChiPhi;
 }
@@ -114,7 +153,7 @@ export function tongDaThu(thanhToanList: ThanhToan[]): number {
 
 export function congNoConLai(
   lines: DonThueChiTiet[],
-  don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung">,
+  don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung"> & Partial<Pick<DonThue, "giam_gia_don">>,
   chiPhiList: ChiPhi[],
   thanhToanList: ThanhToan[]
 ): number {

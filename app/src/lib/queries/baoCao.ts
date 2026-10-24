@@ -28,6 +28,7 @@ export async function layBaoCaoThietBi(
   tongChiPhi: number;
   tongLoiNhuan: number;
   soDonHoanTat: number;
+  tongGiamGiaDon: number;
 }> {
   const supabase = createClient();
 
@@ -39,9 +40,22 @@ export async function layBaoCaoThietBi(
   const { data: chiTietList, error: e2 } = await supabase
     .from("don_thue_chi_tiet")
     .select(
-      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, ngay_tra_thuc_te, tinh_gia_von_theo, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, don_thue!inner(id, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
+      "thiet_bi_id, gia_thue_chot, phan_tram_chiet_khau, tien_chiet_khau_ngay, ngay_tra_thuc_te, tinh_gia_von_theo, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, don_thue!inner(id, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
     );
   if (e2) throw new Error(e2.message);
+
+  // Giảm giá cả đơn không gắn với thiết bị nào → không trừ vào doanh thu từng thiết
+  // bị, chỉ trừ ở tổng doanh thu (đơn đã xong, cùng bộ lọc ngày bắt đầu thuê).
+  const { data: giamGiaList, error: e4 } = await supabase
+    .from("don_thue")
+    .select("giam_gia_don, ngay_bat_dau")
+    .eq("chang", "xong")
+    .eq("da_xoa", false)
+    .gt("giam_gia_don", 0);
+  if (e4) throw new Error(e4.message);
+  const tongGiamGiaDon = (giamGiaList ?? [])
+    .filter((d) => !tuNgay || !denNgay || (d.ngay_bat_dau >= tuNgay && d.ngay_bat_dau <= denNgay))
+    .reduce((s, d) => s + Number(d.giam_gia_don), 0);
 
   const { data: chiPhiList, error: e3 } = await supabase
     .from("chi_phi")
@@ -52,6 +66,7 @@ export async function layBaoCaoThietBi(
     thiet_bi_id: string;
     gia_thue_chot: number;
     phan_tram_chiet_khau: number;
+    tien_chiet_khau_ngay: number;
     ngay_tra_thuc_te: string | null;
     tinh_gia_von_theo: CoSoTinhGiaVon;
     ngay_xuat_kho: string | null;
@@ -118,7 +133,7 @@ export async function layBaoCaoThietBi(
 
   dong.sort((a, b) => b.loiNhuan - a.loiNhuan);
 
-  const tongDoanhThu = dong.reduce((s, d) => s + d.doanhThu, 0);
+  const tongDoanhThu = dong.reduce((s, d) => s + d.doanhThu, 0) - tongGiamGiaDon;
   const tongGiaVon = dong.reduce((s, d) => s + d.giaVon, 0);
 
   return {
@@ -130,5 +145,6 @@ export async function layBaoCaoThietBi(
     // khoản này không gắn với riêng thiết bị nào nên không trừ vào loiNhuan từng dòng.
     tongLoiNhuan: tongDoanhThu - tongGiaVon - tongChiPhi,
     soDonHoanTat: donHoanTatIds.size,
+    tongGiamGiaDon,
   };
 }

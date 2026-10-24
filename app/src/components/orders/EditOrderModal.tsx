@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { suaDonThue } from "@/lib/actions/donThue";
 import type { DonThueDetail } from "@/lib/types";
 import MoneyInput from "@/components/MoneyInput";
+import ChietKhauInput, { sangCotDb, tuDongDaLuu, type ChietKhauNhap } from "./ChietKhauInput";
 
 export default function EditOrderModal({ don, onClose }: { don: DonThueDetail; onClose: () => void }) {
   const router = useRouter();
@@ -21,15 +22,16 @@ export default function EditOrderModal({ don, onClose }: { don: DonThueDetail; o
       id: l.id,
       ten: l.thiet_bi?.ten ?? "",
       gia_thue_chot: String(l.gia_thue_chot),
-      phan_tram_chiet_khau: String(l.phan_tram_chiet_khau),
+      chietKhau: tuDongDaLuu(l),
     }))
   );
+  const [giamGiaDon, setGiamGiaDon] = useState(don.giam_gia_don ? String(don.giam_gia_don) : "");
   const [lyDo, setLyDo] = useState("");
   const [dangGui, setDangGui] = useState(false);
   const [loi, setLoi] = useState("");
 
-  function capNhatDong(id: string, field: "gia_thue_chot" | "phan_tram_chiet_khau", value: string) {
-    setThietBi((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  function capNhatDong(id: string, patch: { gia_thue_chot?: string; chietKhau?: ChietKhauNhap }) {
+    setThietBi((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   }
 
   async function submit(e: React.FormEvent) {
@@ -49,10 +51,11 @@ export default function EditOrderModal({ don, onClose }: { don: DonThueDetail; o
           ngay_bat_dau_su_dung: ngayBatDauSuDung,
           ngay_ket_thuc_su_dung: ngayKetThucSuDung,
           ghi_chu: ghiChu || undefined,
+          giam_gia_don: Number(giamGiaDon) || 0,
           thietBi: thietBi.map((l) => ({
             id: l.id,
             gia_thue_chot: Number(l.gia_thue_chot),
-            phan_tram_chiet_khau: Number(l.phan_tram_chiet_khau),
+            ...sangCotDb(l.chietKhau),
           })),
         },
         lyDo
@@ -147,21 +150,17 @@ export default function EditOrderModal({ don, onClose }: { don: DonThueDetail; o
                     <MoneyInput
                       placeholder="Giá thuê/ngày"
                       value={l.gia_thue_chot}
-                      onChange={(v) => capNhatDong(l.id, "gia_thue_chot", v)}
+                      onChange={(v) => capNhatDong(l.id, { gia_thue_chot: v })}
                     />
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="input !w-20"
-                      placeholder="% CK"
-                      value={l.phan_tram_chiet_khau}
-                      onChange={(e) => capNhatDong(l.id, "phan_tram_chiet_khau", e.target.value)}
-                    />
+                    <ChietKhauInput value={l.chietKhau} onChange={(v) => capNhatDong(l.id, { chietKhau: v })} />
                   </div>
                 ))}
               </div>
             </div>
+
+            <Field label="Giảm giá cả đơn (đ, không bắt buộc)">
+              <MoneyInput placeholder="Vd 200.000" value={giamGiaDon} onChange={setGiamGiaDon} />
+            </Field>
 
             <Field label="Ghi chú">
               <textarea className="input" rows={2} value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />

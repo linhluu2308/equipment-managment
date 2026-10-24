@@ -47,7 +47,7 @@ type KhachHangRaw = {
 };
 
 const QUAN_HE_DON =
-  "ten, so_dien_thoai, nguoi_gioi_thieu, created_at, don_thue(id, ma_don, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, don_thue_chi_tiet(*), chi_phi(*), thanh_toan(*))";
+  "ten, so_dien_thoai, nguoi_gioi_thieu, created_at, don_thue(id, ma_don, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, giam_gia_don, don_thue_chi_tiet(*), chi_phi(*), thanh_toan(*))";
 
 /**
  * Gom các dòng khach_hang trùng số điện thoại thành 1 "khách hàng" — mỗi đơn hiện

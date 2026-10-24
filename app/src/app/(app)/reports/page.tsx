@@ -40,7 +40,10 @@ export default async function ReportsPage({
     preset = "tuy_chon";
   }
 
-  const { dong, tongDoanhThu, tongChiPhi, tongLoiNhuan, soDonHoanTat } = await layBaoCaoThietBi(tuNgay, denNgay);
+  const { dong, tongDoanhThu, tongChiPhi, tongLoiNhuan, soDonHoanTat, tongGiamGiaDon } = await layBaoCaoThietBi(
+    tuNgay,
+    denNgay
+  );
 
   const chuaTungChoThue = dong.filter((d) => d.luotThue === 0);
   const daChoThue = dong.filter((d) => d.luotThue > 0);
@@ -71,6 +74,11 @@ export default async function ReportsPage({
         <div className="kpi-card">
           <div className="kpi-label">Tổng doanh thu (đơn đã xong)</div>
           <div className="kpi-value">{(tongDoanhThu / 1000).toLocaleString("vi-VN")}k</div>
+          {tongGiamGiaDon > 0 && (
+            <div className="mt-1 text-xs text-[var(--text-muted)]">
+              Đã trừ giảm giá cả đơn {tongGiamGiaDon.toLocaleString("vi-VN")}đ
+            </div>
+          )}
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Chi phí phát sinh</div>

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
 import { ghiNhatKyThayDoiDon, nguoiDungHienTaiLaChu } from "@/lib/quyenVaNhatKy";
-import { congNoConLai, khoangNgayGiao, soNgayVonDong } from "@/lib/calculations";
+import { congNoConLai, khoangNgayGiao, loiChietKhau, soNgayVonDong, tongTienThietBi } from "@/lib/calculations";
 import {
   bienBanDaDu,
   capNhatTrangThaiTheoBienBanCuaDon,
@@ -83,12 +83,24 @@ export interface DauVaoTaoDonThue {
   ngay_bat_dau_su_dung: string;
   ngay_ket_thuc_su_dung: string;
   ghi_chu?: string;
+  /** Giảm giá chung cho cả đơn (đ). */
+  giam_gia_don?: number;
   thietBi: {
     thiet_bi_id: string;
     gia_thue_chot: number;
     phan_tram_chiet_khau: number;
+    tien_chiet_khau_ngay?: number;
     tinh_gia_von_theo?: CoSoTinhGiaVon;
   }[];
+}
+
+/** Giảm giá cả đơn phải >= 0 và không vượt tổng tiền thiết bị (đã trừ chiết khấu từng dòng). */
+function loiGiamGiaDon(giamGia: number, tongThietBi: number): string | null {
+  if (giamGia < 0) return "Giảm giá cả đơn không được âm.";
+  if (giamGia > tongThietBi) {
+    return `Giảm giá cả đơn không được lớn hơn tổng tiền thiết bị (${Math.round(tongThietBi).toLocaleString("vi-VN")}đ).`;
+  }
+  return null;
 }
 
 export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: string }> {
@@ -106,13 +118,14 @@ export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: str
   }
 
   for (const tb of input.thietBi) {
-    if (tb.phan_tram_chiet_khau < 0 || tb.phan_tram_chiet_khau > 100) {
-      return { error: "Chiết khấu phải nằm trong khoảng 0–100%." };
-    }
     if (!tb.gia_thue_chot || tb.gia_thue_chot <= 0) {
       return { error: "Giá thuê chốt cho thiết bị phải lớn hơn 0." };
     }
+    const loiCk = loiChietKhau(tb);
+    if (loiCk) return { error: loiCk };
   }
+  const loiGiam = loiGiamGiaDon(input.giam_gia_don ?? 0, tongTienThietBi(input.thietBi, input));
+  if (loiGiam) return { error: loiGiam };
 
   const supabase = await createClient();
 
@@ -137,6 +150,7 @@ export async function taoDonThue(input: DauVaoTaoDonThue): Promise<{ error?: str
     p_ngay_ket_thuc_su_dung: input.ngay_ket_thuc_su_dung,
     p_ghi_chu: input.ghi_chu || null,
     p_thiet_bi: input.thietBi,
+    p_giam_gia_don: input.giam_gia_don ?? 0,
   });
   if (eRpc) return { error: eRpc.message };
 
@@ -154,7 +168,8 @@ export interface DauVaoSuaDonThue {
   ngay_bat_dau_su_dung: string;
   ngay_ket_thuc_su_dung: string;
   ghi_chu?: string;
-  thietBi: { id: string; gia_thue_chot: number; phan_tram_chiet_khau: number }[];
+  giam_gia_don: number;
+  thietBi: { id: string; gia_thue_chot: number; phan_tram_chiet_khau: number; tien_chiet_khau_ngay: number }[];
 }
 
 /**
@@ -190,19 +205,18 @@ export async function suaDonThue(
     return { error: "Ngày nhập kho dự kiến không thể sớm hơn ngày kết thúc sử dụng." };
   }
   for (const tb of input.thietBi) {
-    if (tb.phan_tram_chiet_khau < 0 || tb.phan_tram_chiet_khau > 100) {
-      return { error: "Chiết khấu phải nằm trong khoảng 0–100%." };
-    }
     if (!tb.gia_thue_chot || tb.gia_thue_chot <= 0) {
       return { error: "Giá thuê chốt cho thiết bị phải lớn hơn 0." };
     }
+    const loiCk = loiChietKhau(tb);
+    if (loiCk) return { error: loiCk };
   }
 
   const supabase = createClient();
   const { data: donCu, error: eDon } = await supabase
     .from("don_thue")
     .select(
-      "khach_hang_id, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, ghi_chu, khach_hang(ten, so_dien_thoai, nguoi_gioi_thieu), don_thue_chi_tiet(id, gia_thue_chot, phan_tram_chiet_khau, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
+      "khach_hang_id, ngay_bat_dau, ngay_tra_du_kien, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung, ghi_chu, giam_gia_don, khach_hang(ten, so_dien_thoai, nguoi_gioi_thieu), don_thue_chi_tiet(id, gia_thue_chot, phan_tram_chiet_khau, tien_chiet_khau_ngay, ngay_xuat_kho, ngay_bat_dau_su_dung, ngay_ket_thuc_su_dung)"
     )
     .eq("id", donId)
     .single();
@@ -215,11 +229,13 @@ export async function suaDonThue(
     ngay_bat_dau_su_dung: string;
     ngay_ket_thuc_su_dung: string;
     ghi_chu: string | null;
+    giam_gia_don: number;
     khach_hang: { ten: string; so_dien_thoai: string; nguoi_gioi_thieu: string | null } | null;
     don_thue_chi_tiet: {
       id: string;
       gia_thue_chot: number;
       phan_tram_chiet_khau: number;
+      tien_chiet_khau_ngay: number;
       ngay_xuat_kho: string | null;
       ngay_bat_dau_su_dung: string | null;
       ngay_ket_thuc_su_dung: string | null;
@@ -240,6 +256,14 @@ export async function suaDonThue(
       return { error: "Có thiết bị trả sớm kết thúc sử dụng trước ngày bắt đầu sử dụng mới của đơn." };
     }
   }
+
+  // Giảm giá đơn tính trên giá/chiết khấu MỚI của từng dòng và ngày sử dụng MỚI của đơn.
+  const dongSauSua = cu.don_thue_chi_tiet.map((l) => {
+    const moi = input.thietBi.find((tb) => tb.id === l.id);
+    return moi ? { ...l, ...moi } : l;
+  });
+  const loiGiam = loiGiamGiaDon(input.giam_gia_don, tongTienThietBi(dongSauSua, input));
+  if (loiGiam) return { error: loiGiam };
 
   if (input.ngay_bat_dau !== cu.ngay_bat_dau || input.ngay_tra_du_kien !== cu.ngay_tra_du_kien) {
     // kiemTraTrungLich cần thiet_bi_id, không phải chi_tiet id — lấy lại từ DB.
@@ -290,17 +314,27 @@ export async function suaDonThue(
     duLieuCu.ghi_chu = cu.ghi_chu;
     duLieuMoi.ghi_chu = input.ghi_chu || null;
   }
+  if (input.giam_gia_don !== Number(cu.giam_gia_don ?? 0)) {
+    duLieuCu.giam_gia_don = Number(cu.giam_gia_don ?? 0);
+    duLieuMoi.giam_gia_don = input.giam_gia_don;
+  }
   for (const tb of input.thietBi) {
     const chiTietCu = cu.don_thue_chi_tiet.find((l) => l.id === tb.id);
     if (!chiTietCu) continue;
-    if (tb.gia_thue_chot !== chiTietCu.gia_thue_chot || tb.phan_tram_chiet_khau !== chiTietCu.phan_tram_chiet_khau) {
+    if (
+      tb.gia_thue_chot !== chiTietCu.gia_thue_chot ||
+      tb.phan_tram_chiet_khau !== chiTietCu.phan_tram_chiet_khau ||
+      tb.tien_chiet_khau_ngay !== Number(chiTietCu.tien_chiet_khau_ngay ?? 0)
+    ) {
       duLieuCu[`thiet_bi_${tb.id}`] = {
         gia_thue_chot: chiTietCu.gia_thue_chot,
         phan_tram_chiet_khau: chiTietCu.phan_tram_chiet_khau,
+        tien_chiet_khau_ngay: Number(chiTietCu.tien_chiet_khau_ngay ?? 0),
       };
       duLieuMoi[`thiet_bi_${tb.id}`] = {
         gia_thue_chot: tb.gia_thue_chot,
         phan_tram_chiet_khau: tb.phan_tram_chiet_khau,
+        tien_chiet_khau_ngay: tb.tien_chiet_khau_ngay,
       };
     }
   }
@@ -325,6 +359,7 @@ export async function suaDonThue(
       ngay_bat_dau_su_dung: input.ngay_bat_dau_su_dung,
       ngay_ket_thuc_su_dung: input.ngay_ket_thuc_su_dung,
       ghi_chu: input.ghi_chu || null,
+      giam_gia_don: input.giam_gia_don,
     })
     .eq("id", donId);
   if (eDonUpdate) return { error: eDonUpdate.message };
@@ -332,7 +367,11 @@ export async function suaDonThue(
   for (const tb of input.thietBi) {
     const { error: eLine } = await supabase
       .from("don_thue_chi_tiet")
-      .update({ gia_thue_chot: tb.gia_thue_chot, phan_tram_chiet_khau: tb.phan_tram_chiet_khau })
+      .update({
+        gia_thue_chot: tb.gia_thue_chot,
+        phan_tram_chiet_khau: tb.phan_tram_chiet_khau,
+        tien_chiet_khau_ngay: tb.tien_chiet_khau_ngay,
+      })
       .eq("id", tb.id);
     if (eLine) return { error: eLine.message };
   }

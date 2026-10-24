@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { listThietBi } from "@/lib/actions/thietBi";
 import { taoDonThue, kiemTraTrungLich } from "@/lib/actions/donThue";
 import { CO_SO_TINH_GIA_VON_LABEL, type CoSoTinhGiaVon } from "@/lib/types";
+import MoneyInput from "@/components/MoneyInput";
+import ChietKhauInput, { CHIET_KHAU_TRONG, sangCotDb, type ChietKhauNhap } from "./ChietKhauInput";
 
 type ThietBiOption = {
   id: string;
@@ -18,7 +20,7 @@ type ThietBiOption = {
 type ChonThietBi = {
   thiet_bi_id: string;
   gia_thue_chot: number;
-  phan_tram_chiet_khau: number;
+  chietKhau: ChietKhauNhap;
   tinh_gia_von_theo: CoSoTinhGiaVon;
 };
 
@@ -37,6 +39,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const [ngayBatDauSuDung, setNgayBatDauSuDung] = useState("");
   const [ngayKetThucSuDung, setNgayKetThucSuDung] = useState("");
   const [ghiChu, setGhiChu] = useState("");
+  const [giamGiaDon, setGiamGiaDon] = useState("");
 
   const [dangGui, setDangGui] = useState(false);
   const [loi, setLoi] = useState("");
@@ -68,7 +71,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
         next[tb.id] = {
           thiet_bi_id: tb.id,
           gia_thue_chot: tb.gia_hien_hanh,
-          phan_tram_chiet_khau: 0,
+          chietKhau: CHIET_KHAU_TRONG,
           tinh_gia_von_theo: "ngay_di_chuyen",
         };
       }
@@ -89,8 +92,8 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  function capNhatChietKhau(id: string, value: number) {
-    setChon((prev) => ({ ...prev, [id]: { ...prev[id], phan_tram_chiet_khau: value } }));
+  function capNhatChietKhau(id: string, value: ChietKhauNhap) {
+    setChon((prev) => ({ ...prev, [id]: { ...prev[id], chietKhau: value } }));
   }
 
   function capNhatCoSoTinhGiaVon(id: string, value: CoSoTinhGiaVon) {
@@ -123,7 +126,8 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
       ngay_bat_dau_su_dung: ngayBatDauSuDung,
       ngay_ket_thuc_su_dung: ngayKetThucSuDung,
       ghi_chu: ghiChu || undefined,
-      thietBi: Object.values(chon),
+      giam_gia_don: Number(giamGiaDon) || 0,
+      thietBi: Object.values(chon).map(({ chietKhau, ...tb }) => ({ ...tb, ...sangCotDb(chietKhau) })),
     });
     setDangGui(false);
     if (ketQua?.error) setLoi(ketQua.error);
@@ -249,16 +253,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                     {tb.gia_hien_hanh.toLocaleString("vi-VN")}đ/ngày
                   </span>
                   {chon[tb.id] && (
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="input !w-20"
-                      placeholder="% CK"
-                      value={chon[tb.id].phan_tram_chiet_khau}
-                      onClick={(e) => e.preventDefault()}
-                      onChange={(e) => capNhatChietKhau(tb.id, Number(e.target.value))}
-                    />
+                    <ChietKhauInput value={chon[tb.id].chietKhau} onChange={(v) => capNhatChietKhau(tb.id, v)} />
                   )}
                   {chon[tb.id] && tb.nguon_goc === "thue_ngoai" && (
                     <select
@@ -282,6 +277,10 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
           </div>
+
+          <Field label="Giảm giá cả đơn (đ, không bắt buộc)">
+            <MoneyInput placeholder="Vd 200.000" value={giamGiaDon} onChange={setGiamGiaDon} />
+          </Field>
 
           <Field label="Ghi chú">
             <textarea className="input" rows={2} value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />

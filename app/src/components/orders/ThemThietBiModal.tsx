@@ -7,6 +7,7 @@ import { kiemTraTrungLich } from "@/lib/actions/donThue";
 import { themThietBiVaoDon } from "@/lib/actions/thietBiTrongDon";
 import { CO_SO_TINH_GIA_VON_LABEL, type CoSoTinhGiaVon, type DonThueDetail } from "@/lib/types";
 import { formatNgay } from "@/lib/formatDate";
+import ChietKhauInput, { CHIET_KHAU_TRONG, sangCotDb, type ChietKhauNhap } from "./ChietKhauInput";
 
 type ThietBiOption = {
   id: string;
@@ -21,7 +22,7 @@ type ThietBiOption = {
 type ChonThietBi = {
   thiet_bi_id: string;
   gia_thue_chot: number;
-  phan_tram_chiet_khau: number;
+  chietKhau: ChietKhauNhap;
   tinh_gia_von_theo: CoSoTinhGiaVon;
 };
 
@@ -75,7 +76,7 @@ export default function ThemThietBiModal({ don, onClose }: { don: DonThueDetail;
     }
     setChon((p) => ({
       ...p,
-      [tb.id]: { thiet_bi_id: tb.id, gia_thue_chot: tb.gia_hien_hanh, phan_tram_chiet_khau: 0, tinh_gia_von_theo: "ngay_di_chuyen" },
+      [tb.id]: { thiet_bi_id: tb.id, gia_thue_chot: tb.gia_hien_hanh, chietKhau: CHIET_KHAU_TRONG, tinh_gia_von_theo: "ngay_di_chuyen" },
     }));
     const kq = await kiemTraTrungLich(tb.id, dangGiao ? ngayGiao : don.ngay_bat_dau, don.ngay_tra_du_kien, don.id);
     if (kq.tinhTrang !== "trong") {
@@ -97,7 +98,7 @@ export default function ThemThietBiModal({ don, onClose }: { don: DonThueDetail;
     setDangGui(true);
     try {
       const res = await themThietBiVaoDon(don.id, {
-        thietBi: Object.values(chon),
+        thietBi: Object.values(chon).map(({ chietKhau, ...tb }) => ({ ...tb, ...sangCotDb(chietKhau) })),
         ...(dangGiao ? { ngay_giao: ngayGiao, ngay_bat_dau_su_dung: ngayBatDauSuDung } : {}),
       });
       if (res.error) return setLoi(res.error);
@@ -172,16 +173,7 @@ export default function ThemThietBiModal({ don, onClose }: { don: DonThueDetail;
                 </span>
                 <span className="text-[var(--text-muted)] whitespace-nowrap">{tb.gia_hien_hanh.toLocaleString("vi-VN")}đ/ngày</span>
                 {chon[tb.id] && (
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="input !w-20"
-                    placeholder="% CK"
-                    value={chon[tb.id].phan_tram_chiet_khau}
-                    onClick={(e) => e.preventDefault()}
-                    onChange={(e) => capNhat(tb.id, { phan_tram_chiet_khau: Number(e.target.value) })}
-                  />
+                  <ChietKhauInput value={chon[tb.id].chietKhau} onChange={(v) => capNhat(tb.id, { chietKhau: v })} />
                 )}
                 {chon[tb.id] && tb.nguon_goc === "thue_ngoai" && (
                   <select

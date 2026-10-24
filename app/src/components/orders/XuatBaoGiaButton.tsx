@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { soNgayThue, soNgaySuDungDong, thanhTienDong } from "@/lib/calculations";
+import { moTaChietKhau, soNgayThue, soNgaySuDungDong, thanhTienDong } from "@/lib/calculations";
 import { formatNgay } from "@/lib/formatDate";
 import type { ChangDon } from "@/lib/types";
 
 type DonChiTiet = {
   gia_thue_chot: number;
   phan_tram_chiet_khau: number;
+  tien_chiet_khau_ngay?: number;
   ngay_bat_dau_su_dung?: string | null;
   ngay_ket_thuc_su_dung?: string | null;
   thiet_bi: { ten: string; ma: string | null } | null;
@@ -22,6 +23,7 @@ export default function XuatBaoGiaButton({
   ngayBatDauSuDung,
   ngayKetThucSuDung,
   chiTiet,
+  giamGiaDon,
   chang,
 }: {
   maDon: string;
@@ -32,6 +34,7 @@ export default function XuatBaoGiaButton({
   ngayBatDauSuDung: string;
   ngayKetThucSuDung: string;
   chiTiet: DonChiTiet[];
+  giamGiaDon: number;
   chang: ChangDon;
 }) {
   const [dangXuat, setDangXuat] = useState(false);
@@ -58,7 +61,7 @@ export default function XuatBaoGiaButton({
           ten: l.thiet_bi?.ten ?? "Thiết bị",
           ma: l.thiet_bi?.ma ?? null,
           donGia: l.gia_thue_chot,
-          chietKhauPhanTram: l.phan_tram_chiet_khau,
+          chietKhau: moTaChietKhau(l),
           soNgay: soNgayDong,
           thanhTien: thanhTienDong(l, soNgayDong),
         };
@@ -76,6 +79,7 @@ export default function XuatBaoGiaButton({
           ngayKetThucSuDung={formatNgay(ngayKetThucSuDung)}
           soNgay={soNgay}
           dong={dong}
+          giamGiaDon={giamGiaDon}
         />
       ).toBlob();
 
