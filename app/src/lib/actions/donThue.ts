@@ -3,49 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
-import { createClient as createServerClient } from "@/lib/supabase/server";
-import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
+import { ghiNhatKyThayDoiDon, nguoiDungHienTaiLaChu } from "@/lib/quyenVaNhatKy";
 import { khoangNgayGiao, soNgayVonDong } from "@/lib/calculations";
-import type { ChangDon, CoSoTinhGiaVon, HanhDongThayDoiDon, NhatKyThayDoiDon } from "@/lib/types";
+import type { ChangDon, CoSoTinhGiaVon, NhatKyThayDoiDon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
-
-/**
- * Xác thực người gọi đang đăng nhập và có vai "chu" — dùng cho mọi Server Action
- * sửa/xoá/khôi phục đơn. RLS đang tắt toàn app (xem 0001_init.sql) nên đây là lớp
- * kiểm tra quyền duy nhất ở tầng dữ liệu, không thể chỉ dựa vào useVai() ở client.
- */
-async function nguoiDungHienTaiLaChu(): Promise<{ ten: string; email: string }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) throw new Error("Chưa đăng nhập.");
-  const tv = await layThanhVienTheoEmail(user.email);
-  if (!tv || tv.vai !== "chu") throw new Error("Chỉ chủ mới được thực hiện thao tác này.");
-  return { ten: tv.ten, email: user.email };
-}
-
-async function ghiNhatKyThayDoiDon(
-  donId: string,
-  nguoiSua: { ten: string; email: string },
-  hanhDong: HanhDongThayDoiDon,
-  lyDo: string,
-  duLieuCu: Record<string, unknown> | null,
-  duLieuMoi: Record<string, unknown> | null
-) {
-  const supabase = createClient();
-  const { error } = await supabase.from("nhat_ky_thay_doi_don").insert({
-    don_thue_id: donId,
-    nguoi_sua: nguoiSua.ten,
-    nguoi_sua_email: nguoiSua.email,
-    hanh_dong: hanhDong,
-    ly_do: lyDo,
-    du_lieu_cu: duLieuCu,
-    du_lieu_moi: duLieuMoi,
-  });
-  if (error) throw new Error(error.message);
-}
 
 // Dùng chung ở listDonThue và getDonThue — tránh gõ trùng cấu trúc quan hệ tài chính mỗi lần select.
 const QUAN_HE_TAI_CHINH = "thanh_toan(*), chi_phi(*)";

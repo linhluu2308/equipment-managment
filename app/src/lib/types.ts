@@ -118,12 +118,21 @@ export interface DonThue {
   updated_at: string;
 }
 
-export type HanhDongThayDoiDon = "sua" | "xoa" | "khoi_phuc";
+export type HanhDongThayDoiDon = "sua" | "xoa" | "khoi_phuc" | "sua_thanh_toan" | "xoa_thanh_toan";
 
 export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   sua: "Sửa đơn",
   xoa: "Xoá đơn",
   khoi_phuc: "Khôi phục đơn",
+  sua_thanh_toan: "Sửa giao dịch thanh toán",
+  xoa_thanh_toan: "Xoá giao dịch thanh toán",
+};
+
+export const LOAI_THANH_TOAN_LABEL: Record<LoaiThanhToan, string> = {
+  coc: "Cọc tiền",
+  dot: "Thanh toán đợt",
+  tat_toan: "Tất toán",
+  hoan_coc: "Hoàn cọc",
 };
 
 export interface NhatKyThayDoiDon {

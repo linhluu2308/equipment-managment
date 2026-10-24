@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDonThue, getLichSuThayDoiDon } from "@/lib/actions/donThue";
-import { CHANG_LABEL, HANH_DONG_LABEL, type DonThueDetail } from "@/lib/types";
+import { CHANG_LABEL, HANH_DONG_LABEL, LOAI_THANH_TOAN_LABEL, type DonThueDetail } from "@/lib/types";
 import { soNgayThue, soNgayThueSuDung, thanhTienDong, tongTienDon, tongDaThu } from "@/lib/calculations";
 import { formatNgay, formatNgayGio } from "@/lib/formatDate";
 import OrderActions from "@/components/orders/OrderActions";
 import RemoveLineButton from "@/components/orders/RemoveLineButton";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
+import ThanhToanChuActions from "@/components/orders/ThanhToanChuActions";
 
 export const dynamic = "force-dynamic";
 
@@ -150,11 +151,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </h3>
           <ul className="text-sm divide-y divide-[var(--border-color)]">
             {don.thanh_toan.map((t) => (
-              <li key={t.id} className="flex justify-between py-1.5">
+              <li key={t.id} className="flex items-center justify-between py-1.5">
                 <span>
-                  {t.loai} · {formatNgay(t.ngay_thu)} {t.hinh_thuc && `· ${t.hinh_thuc}`}
+                  {LOAI_THANH_TOAN_LABEL[t.loai] ?? t.loai} · {formatNgay(t.ngay_thu)} {t.hinh_thuc && `· ${t.hinh_thuc}`}
                 </span>
-                <span className="font-semibold">{t.so_tien.toLocaleString("vi-VN")}đ</span>
+                <span className="flex items-center">
+                  <span className="font-semibold">{t.so_tien.toLocaleString("vi-VN")}đ</span>
+                  {!don.da_xoa && <ThanhToanChuActions donId={don.id} giaoDich={t} />}
+                </span>
               </li>
             ))}
             {don.thanh_toan.length === 0 && <li className="py-1.5 text-[var(--text-muted)]">Chưa có giao dịch.</li>}
@@ -239,7 +243,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   <span>
                     <span
                       className={`badge ${
-                        nk.hanh_dong === "xoa" ? "badge-danger" : nk.hanh_dong === "khoi_phuc" ? "badge-success" : "badge-info"
+                        nk.hanh_dong === "xoa" || nk.hanh_dong === "xoa_thanh_toan"
+                          ? "badge-danger"
+                          : nk.hanh_dong === "khoi_phuc"
+                            ? "badge-success"
+                            : "badge-info"
                       }`}
                     >
                       {HANH_DONG_LABEL[nk.hanh_dong]}
@@ -249,15 +257,24 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   <span className="text-xs text-[var(--text-muted)]">{formatNgayGio(nk.created_at)}</span>
                 </div>
                 <p className="mt-1 text-[var(--text-muted)]">Lý do: {nk.ly_do}</p>
-                {nk.du_lieu_moi && Object.keys(nk.du_lieu_moi).length > 0 && (
-                  <ul className="mt-1 space-y-0.5 text-xs text-[var(--text-muted)]">
-                    {Object.keys(nk.du_lieu_moi).map((key) => (
-                      <li key={key}>
-                        <span className="font-mono">{key}</span>: {formatGiaTriThayDoi(key, nk.du_lieu_cu?.[key])} →{" "}
-                        {formatGiaTriThayDoi(key, nk.du_lieu_moi?.[key])}
-                      </li>
-                    ))}
-                  </ul>
+                {nk.hanh_dong === "xoa_thanh_toan" && nk.du_lieu_cu ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Giao dịch đã xoá: {formatGiaTriThayDoi("loai", nk.du_lieu_cu.loai)} ·{" "}
+                    {formatGiaTriThayDoi("so_tien", nk.du_lieu_cu.so_tien)} · {formatGiaTriThayDoi("ngay_thu", nk.du_lieu_cu.ngay_thu)}
+                    {nk.du_lieu_cu.hinh_thuc ? ` · ${nk.du_lieu_cu.hinh_thuc}` : ""}
+                  </p>
+                ) : (
+                  nk.du_lieu_moi &&
+                  Object.keys(nk.du_lieu_moi).length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-xs text-[var(--text-muted)]">
+                      {Object.keys(nk.du_lieu_moi).map((key) => (
+                        <li key={key}>
+                          <span className="font-mono">{key}</span>: {formatGiaTriThayDoi(key, nk.du_lieu_cu?.[key])} →{" "}
+                          {formatGiaTriThayDoi(key, nk.du_lieu_moi?.[key])}
+                        </li>
+                      ))}
+                    </ul>
+                  )
                 )}
               </li>
             ))}
@@ -273,6 +290,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 function formatGiaTriThayDoi(key: string, v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
   if (key.startsWith("ngay_") && typeof v === "string") return formatNgay(v);
+  if (key === "so_tien" && typeof v === "number") return `${v.toLocaleString("vi-VN")}đ`;
+  if (key === "loai" && typeof v === "string" && v in LOAI_THANH_TOAN_LABEL)
+    return LOAI_THANH_TOAN_LABEL[v as keyof typeof LOAI_THANH_TOAN_LABEL];
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }

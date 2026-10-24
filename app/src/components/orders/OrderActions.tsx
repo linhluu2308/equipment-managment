@@ -9,7 +9,7 @@ import { ghiChiPhi } from "@/lib/actions/chiPhi";
 import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
 import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
 import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
-import type { ChangDon, DonThueDetail, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
+import { LOAI_THANH_TOAN_LABEL, type ChangDon, type DonThueDetail, type LoaiThanhToan, type TinhTrangThietBi } from "@/lib/types";
 import { formatNgay } from "@/lib/formatDate";
 import { congNoConLai } from "@/lib/calculations";
 import MoneyInput from "@/components/MoneyInput";
@@ -213,13 +213,6 @@ function GhiChuHoanThanh({
     </div>
   );
 }
-
-const LOAI_THANH_TOAN_LABEL: Record<LoaiThanhToan, string> = {
-  coc: "Cọc tiền",
-  dot: "Thanh toán đợt",
-  tat_toan: "Tất toán",
-  hoan_coc: "Hoàn cọc",
-};
 
 /**
  * Khoá khi khách đã thanh toán đủ (công nợ = 0). Công nợ có thể mở lại tự động
