@@ -134,7 +134,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </section>
 
       <section className="card space-y-4">
-        <div className="card-title !mb-0">Tài chính</div>
+        <div className="flex items-center justify-between">
+          <div className="card-title !mb-0">Tài chính</div>
+          {tong > 0 && Math.round(congNo) === 0 && <span className="badge badge-success">✓ Đã thanh toán đủ</span>}
+        </div>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Stat label="Tổng tiền đơn" value={tong} />
           <Stat label="Đã thu" value={daThu} />

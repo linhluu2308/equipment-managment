@@ -11,6 +11,7 @@ import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
 import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
 import type { ChangDon, DonThueDetail, LoaiThanhToan, TinhTrangThietBi } from "@/lib/types";
 import { formatNgay } from "@/lib/formatDate";
+import { congNoConLai } from "@/lib/calculations";
 import MoneyInput from "@/components/MoneyInput";
 import EditOrderModal from "./EditOrderModal";
 import OrderLyDoModal from "./OrderLyDoModal";
@@ -88,8 +89,11 @@ export default function OrderActions({ don }: { don: DonThueDetail }) {
 
       {hienFormTaiChinh && (
         <div className="grid gap-4 border-t border-[var(--border-color)] pt-4 md:grid-cols-2">
-          <ThanhToanForm donId={don.id} />
-          <ChiPhiForm donId={don.id} />
+          <ThanhToanForm
+            donId={don.id}
+            congNo={Math.round(congNoConLai(don.don_thue_chi_tiet, don, don.chi_phi, don.thanh_toan))}
+          />
+          <ChiPhiForm donId={don.id} chiPhiList={don.chi_phi} />
           <CocGiayToForm donId={don.id} cocList={don.coc_giay_to} />
           {(don.chang === "da_giao" || don.chang === "cho_tra") && (
             <>
@@ -178,52 +182,137 @@ function ActionButton({
   );
 }
 
-function ThanhToanForm({ donId }: { donId: string }) {
+/** Khung chung cho các khối thao tác tài chính, giữ cùng một kiểu hiển thị. */
+function KhoiThaoTac({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+/** Ghi chú ngắn cho khối đã hoàn thành, kèm nút mở lại (nếu có) để thao tác tiếp. */
+function GhiChuHoanThanh({
+  children,
+  moLaiLabel,
+  onMoLai,
+}: {
+  children: React.ReactNode;
+  moLaiLabel?: string;
+  onMoLai?: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-[#15803d]">✓ {children}</p>
+      {moLaiLabel && onMoLai && (
+        <button type="button" onClick={onMoLai} className="text-xs font-semibold text-[var(--accent-primary)] hover:underline">
+          {moLaiLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const LOAI_THANH_TOAN_LABEL: Record<LoaiThanhToan, string> = {
+  coc: "Cọc tiền",
+  dot: "Thanh toán đợt",
+  tat_toan: "Tất toán",
+  hoan_coc: "Hoàn cọc",
+};
+
+/**
+ * Khoá khi khách đã thanh toán đủ (công nợ = 0). Công nợ có thể mở lại tự động
+ * nếu sau đó ghi thêm chi phí phát sinh. Khách trả dư (công nợ < 0) thì chỉ cho
+ * ghi "Hoàn cọc". Server action cũng kiểm tra lại cùng quy tắc.
+ */
+function ThanhToanForm({ donId, congNo }: { donId: string; congNo: number }) {
   const router = useRouter();
+  const traDu = congNo < 0;
+  const cacLoai: LoaiThanhToan[] = traDu ? ["hoan_coc"] : ["coc", "dot", "tat_toan"];
   const [soTien, setSoTien] = useState("");
   const [hinhThuc, setHinhThuc] = useState("Chuyển khoản");
-  const [loai, setLoai] = useState<LoaiThanhToan>("coc");
+  const [loai, setLoai] = useState<LoaiThanhToan>(cacLoai[0]);
+  const [loi, setLoi] = useState("");
   const [pending, start] = useTransition();
+
+  // Danh sách loại đổi khi chuyển giữa "còn nợ" và "trả dư" — luôn giữ lựa chọn hợp lệ.
+  const loaiHienTai = cacLoai.includes(loai) ? loai : cacLoai[0];
+
+  if (congNo === 0) {
+    return (
+      <KhoiThaoTac title="Thanh toán">
+        <GhiChuHoanThanh>Khách đã thanh toán đủ — đã khoá ghi nhận.</GhiChuHoanThanh>
+        <p className="text-xs text-[var(--text-muted)]">Nếu phát sinh thêm chi phí, phần này sẽ tự mở lại.</p>
+      </KhoiThaoTac>
+    );
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!soTien) return;
+    setLoi("");
     start(async () => {
-      await ghiThanhToan(donId, { so_tien: Number(soTien), hinh_thuc: hinhThuc, loai });
+      const res = await ghiThanhToan(donId, { so_tien: Number(soTien), hinh_thuc: hinhThuc, loai: loaiHienTai });
+      if (res.error) {
+        setLoi(res.error);
+        return;
+      }
       setSoTien("");
       router.refresh();
     });
   }
 
+  function dienSoConLai() {
+    setSoTien(String(Math.abs(congNo)));
+    if (!traDu) setLoai("tat_toan");
+  }
+
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Ghi nhận thanh toán</h3>
-      <div className="flex gap-2">
-        <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
-        <select className="input" value={loai} onChange={(e) => setLoai(e.target.value as LoaiThanhToan)}>
-          <option value="coc">Cọc tiền</option>
-          <option value="dot">Thanh toán đợt</option>
-          <option value="tat_toan">Tất toán</option>
-          <option value="hoan_coc">Hoàn cọc</option>
+    <form onSubmit={submit}>
+      <KhoiThaoTac title={traDu ? "Hoàn tiền dư cho khách" : "Ghi nhận thanh toán"}>
+        <p className="text-sm">
+          {traDu ? "Khách trả dư: " : "Còn phải thu: "}
+          <span className="font-bold" style={{ color: traDu ? "var(--text-main)" : "#dc2626" }}>
+            {Math.abs(congNo).toLocaleString("vi-VN")}đ
+          </span>{" "}
+          <button type="button" onClick={dienSoConLai} className="text-xs font-semibold text-[var(--accent-primary)] hover:underline">
+            {traDu ? "(điền số cần hoàn)" : "(điền đủ số còn lại)"}
+          </button>
+        </p>
+        {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
+        <div className="flex gap-2">
+          <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
+          <select className="input" value={loaiHienTai} onChange={(e) => setLoai(e.target.value as LoaiThanhToan)}>
+            {cacLoai.map((l) => (
+              <option key={l} value={l}>
+                {LOAI_THANH_TOAN_LABEL[l]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <select className="input" value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
+          <option>Chuyển khoản</option>
+          <option>Tiền mặt</option>
         </select>
-      </div>
-      <select className="input" value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
-        <option>Chuyển khoản</option>
-        <option>Tiền mặt</option>
-      </select>
-      <button disabled={pending} className="btn-primary w-full">
-        {pending ? "Đang lưu..." : "Ghi nhận"}
-      </button>
+        <button disabled={pending} className="btn-primary w-full">
+          {pending ? "Đang lưu..." : traDu ? "Ghi nhận hoàn cọc" : "Ghi nhận"}
+        </button>
+      </KhoiThaoTac>
     </form>
   );
 }
 
-function ChiPhiForm({ donId }: { donId: string }) {
+/** Thu gọn mặc định: chỉ hiện tóm tắt các khoản đã ghi, bấm mới mở form thêm. */
+function ChiPhiForm({ donId, chiPhiList }: { donId: string; chiPhiList: { so_tien: number }[] }) {
   const router = useRouter();
+  const [mo, setMo] = useState(false);
   const [loai, setLoai] = useState("Vận chuyển");
   const [moTa, setMoTa] = useState("");
   const [soTien, setSoTien] = useState("");
   const [pending, start] = useTransition();
+
+  const tongChiPhi = chiPhiList.reduce((s, c) => s + c.so_tien, 0);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -232,44 +321,75 @@ function ChiPhiForm({ donId }: { donId: string }) {
       await ghiChiPhi(donId, { loai, mo_ta: moTa, so_tien: Number(soTien) });
       setSoTien("");
       setMoTa("");
+      setMo(false);
       router.refresh();
     });
   }
 
+  if (!mo) {
+    return (
+      <KhoiThaoTac title="Chi phí phát sinh">
+        <p className="text-sm text-[var(--text-muted)]">
+          {chiPhiList.length > 0
+            ? `Đã ghi ${chiPhiList.length} khoản · ${tongChiPhi.toLocaleString("vi-VN")}đ (xem ở mục Tài chính)`
+            : "Chưa có chi phí phát sinh."}
+        </p>
+        <button type="button" className="btn-secondary w-full" onClick={() => setMo(true)}>
+          + Thêm chi phí phát sinh
+        </button>
+      </KhoiThaoTac>
+    );
+  }
+
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Chi phí phát sinh</h3>
-      <select className="input" value={loai} onChange={(e) => setLoai(e.target.value)}>
-        <option>Vận chuyển</option>
-        <option>Bồi thường hư hại</option>
-        <option>Phụ phí</option>
-      </select>
-      <input className="input" placeholder="Mô tả" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
-      <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
-      <button disabled={pending} className="btn-primary w-full">
-        {pending ? "Đang lưu..." : "Thêm chi phí"}
-      </button>
+    <form onSubmit={submit}>
+      <KhoiThaoTac title="Thêm chi phí phát sinh">
+        <select className="input" value={loai} onChange={(e) => setLoai(e.target.value)}>
+          <option>Vận chuyển</option>
+          <option>Bồi thường hư hại</option>
+          <option>Phụ phí</option>
+        </select>
+        <input className="input" placeholder="Mô tả" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
+        <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
+        <div className="flex gap-2">
+          <button type="button" className="btn-secondary flex-1" onClick={() => setMo(false)}>
+            Đóng
+          </button>
+          <button disabled={pending} className="btn-primary flex-1">
+            {pending ? "Đang lưu..." : "Thêm chi phí"}
+          </button>
+        </div>
+      </KhoiThaoTac>
     </form>
   );
 }
 
+/**
+ * Khi mọi giấy tờ cọc đã hoàn trả: ẩn form, chỉ còn ghi chú + link mở lại nếu cần
+ * nhận thêm giấy tờ. Đang giữ giấy tờ nào thì hiện nút hoàn trả theo đúng tên giấy tờ.
+ */
 function CocGiayToForm({
   donId,
   cocList,
 }: {
   donId: string;
-  cocList: { id: string; trang_thai: string }[];
+  cocList: { id: string; trang_thai: string; loai_giay_to: string; so_hieu: string | null }[];
 }) {
   const router = useRouter();
   const [loaiGiayTo, setLoaiGiayTo] = useState("CCCD");
   const [soHieu, setSoHieu] = useState("");
+  const [moThem, setMoThem] = useState(false);
   const [pending, start] = useTransition();
+
+  const dangGiu = cocList.filter((c) => c.trang_thai === "dang_giu");
+  const daHoanTraHet = cocList.length > 0 && dangGiu.length === 0;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     start(async () => {
       await themCocGiayTo(donId, { loai_giay_to: loaiGiayTo, so_hieu: soHieu });
       setSoHieu("");
+      setMoThem(false);
       router.refresh();
     });
   }
@@ -281,25 +401,25 @@ function CocGiayToForm({
     });
   }
 
+  if (daHoanTraHet && !moThem) {
+    return (
+      <KhoiThaoTac title="Cọc giấy tờ">
+        <GhiChuHoanThanh moLaiLabel="+ Nhận thêm giấy tờ cọc" onMoLai={() => setMoThem(true)}>
+          Đã hoàn trả đủ {cocList.length} giấy tờ cho khách.
+        </GhiChuHoanThanh>
+      </KhoiThaoTac>
+    );
+  }
+
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Cọc giấy tờ</h3>
-      <select className="input" value={loaiGiayTo} onChange={(e) => setLoaiGiayTo(e.target.value)}>
-        <option>CCCD</option>
-        <option>Bằng lái xe</option>
-        <option>Cà vẹt xe</option>
-        <option>Passport</option>
-        <option>Khác</option>
-      </select>
-      <input className="input" placeholder="Số hiệu" value={soHieu} onChange={(e) => setSoHieu(e.target.value)} />
-      <button disabled={pending} className="btn-primary w-full">
-        {pending ? "Đang lưu..." : "Thêm giấy tờ cọc"}
-      </button>
-      {cocList.filter((c) => c.trang_thai === "dang_giu").length > 0 && (
-        <div className="space-y-1 pt-1">
-          {cocList
-            .filter((c) => c.trang_thai === "dang_giu")
-            .map((c) => (
+    <form onSubmit={submit}>
+      <KhoiThaoTac title="Cọc giấy tờ">
+        {dangGiu.length > 0 && (
+          <div className="space-y-1 pb-1">
+            <p className="text-xs text-[var(--text-muted)]">
+              Đang giữ {dangGiu.length} giấy tờ — bấm khi đã trả lại khách:
+            </p>
+            {dangGiu.map((c) => (
               <button
                 type="button"
                 key={c.id}
@@ -307,11 +427,31 @@ function CocGiayToForm({
                 onClick={() => hoanTra(c.id)}
                 className="w-full rounded-lg border border-[var(--border-color)] bg-white py-1.5 text-xs font-semibold text-[var(--text-main)] hover:bg-[#f8fafc] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Đánh dấu đã hoàn trả giấy tờ (mã {c.id.slice(0, 6)})
+                ↩ Đã trả {c.loai_giay_to}
+                {c.so_hieu ? ` · ${c.so_hieu}` : ""}
               </button>
             ))}
+          </div>
+        )}
+        <select className="input" value={loaiGiayTo} onChange={(e) => setLoaiGiayTo(e.target.value)}>
+          <option>CCCD</option>
+          <option>Bằng lái xe</option>
+          <option>Cà vẹt xe</option>
+          <option>Passport</option>
+          <option>Khác</option>
+        </select>
+        <input className="input" placeholder="Số hiệu" value={soHieu} onChange={(e) => setSoHieu(e.target.value)} />
+        <div className="flex gap-2">
+          {moThem && (
+            <button type="button" className="btn-secondary flex-1" onClick={() => setMoThem(false)}>
+              Đóng
+            </button>
+          )}
+          <button disabled={pending} className="btn-primary flex-1">
+            {pending ? "Đang lưu..." : "Thêm giấy tờ cọc"}
+          </button>
         </div>
-      )}
+      </KhoiThaoTac>
     </form>
   );
 }
