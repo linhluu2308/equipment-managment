@@ -66,7 +66,7 @@ export default function CalendarGrid({ events }: { events: CalendarEvent[] }) {
         <div className="flex gap-3.5 text-xs text-[var(--text-muted)] flex-wrap">
           <Legend mau="#d97706" label="Chờ chốt / báo giá" />
           <Legend mau="#0284c7" label="Đã giao / đang chạy" />
-          <Legend mau="#16a34a" label="Chờ trả" />
+          <Legend mau="#16a34a" label="Chờ thanh toán" />
           <Legend mau="#94a3b8" label="Đã xong" />
         </div>
       </div>

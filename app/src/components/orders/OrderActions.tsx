@@ -32,15 +32,16 @@ export default function OrderActions({ don }: { don: DonThueDetail }) {
   function chuyenChang(changMoi: ChangDon) {
     setLoi("");
     start(async () => {
-      try {
-        await chuyenChangDon(don.id, changMoi);
-        router.refresh();
-      } catch (err) {
-        setLoi((err as Error).message);
+      const res = await chuyenChangDon(don.id, changMoi);
+      if (res.error) {
+        setLoi(res.error);
+        return;
       }
+      router.refresh();
     });
   }
 
+  const congNo = Math.round(congNoConLai(don.don_thue_chi_tiet, don, don.chi_phi, don.thanh_toan));
   const choPhepChuyenChang = !don.da_xoa && don.chang !== "xong" && don.chang !== "huy";
   const hienFormTaiChinh = !don.da_xoa && (don.chang === "bao_gia" || don.chang === "da_giao" || don.chang === "cho_tra");
 
@@ -80,26 +81,29 @@ export default function OrderActions({ don }: { don: DonThueDetail }) {
             </ActionButton>
           )}
           {don.chang === "cho_tra" && (
-            <ActionButton onClick={() => chuyenChang("xong")} pending={pending}>
-              Chốt công nợ & Hoàn tất
-            </ActionButton>
+            <>
+              <ActionButton onClick={() => chuyenChang("xong")} pending={pending} disabled={congNo !== 0}>
+                Chốt công nợ & Hoàn tất
+              </ActionButton>
+              {congNo !== 0 && (
+                <span className="self-center text-xs text-[var(--text-muted)]">
+                  {congNo > 0
+                    ? `Còn phải thu ${congNo.toLocaleString("vi-VN")}đ — thu đủ mới hoàn tất được.`
+                    : `Khách trả dư ${(-congNo).toLocaleString("vi-VN")}đ — ghi nhận hoàn cọc trước khi hoàn tất.`}
+                </span>
+              )}
+            </>
           )}
         </div>
       )}
 
       {hienFormTaiChinh && (
         <div className="grid gap-4 border-t border-[var(--border-color)] pt-4 md:grid-cols-2">
-          <ThanhToanForm
-            donId={don.id}
-            congNo={Math.round(congNoConLai(don.don_thue_chi_tiet, don, don.chi_phi, don.thanh_toan))}
-          />
+          <ThanhToanForm donId={don.id} congNo={congNo} />
           <ChiPhiForm donId={don.id} chiPhiList={don.chi_phi} />
           <CocGiayToForm donId={don.id} cocList={don.coc_giay_to} />
           {(don.chang === "da_giao" || don.chang === "cho_tra") && (
-            <>
-              <NgayTraThucTeForm donId={don.id} ngayBatDau={don.ngay_bat_dau} ngayTraDuKien={don.ngay_tra_du_kien} chiTiet={don.don_thue_chi_tiet} />
-              <KiemTraForm donId={don.id} chiTiet={don.don_thue_chi_tiet} />
-            </>
+            <TraThietBiSection don={don} laChu={vai === "chu"} />
           )}
         </div>
       )}
@@ -143,7 +147,7 @@ function ChuActions({ don }: { don: DonThueDetail }) {
           warning={
             don.chang === "xong"
               ? 'Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Đơn này đã ở chặng "Xong" nên công nợ nhà cung cấp đã phát sinh từ đơn sẽ bị xoá theo — khôi phục đơn sẽ tự phát sinh lại.'
-              : 'Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Nếu đơn đang giữ thiết bị (Đã giao/Chờ trả), thiết bị sẽ tự chuyển về "Sẵn sàng".'
+              : 'Đơn sẽ được đánh dấu "Đã xoá" — ẩn khỏi danh sách và báo cáo nhưng vẫn giữ lại dữ liệu để đối chiếu/khôi phục sau. Thiết bị của đơn chưa kiểm tra trả (đang ở chỗ khách) sẽ tự chuyển về "Sẵn sàng".'
           }
           confirmLabel="Xoá đơn"
           danger
@@ -169,14 +173,16 @@ function ActionButton({
   onClick,
   pending,
   danger,
+  disabled,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   pending: boolean;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <button disabled={pending} onClick={onClick} className={danger ? "btn-danger-outline" : "btn-primary"}>
+    <button disabled={pending || disabled} onClick={onClick} className={danger ? "btn-danger-outline" : "btn-primary"}>
       {pending ? "Đang xử lý..." : children}
     </button>
   );
@@ -449,6 +455,57 @@ function CocGiayToForm({
   );
 }
 
+const TINH_TRANG_LABEL: Record<TinhTrangThietBi, string> = { tot: "Tốt", tray_xuoc: "Trầy xước", hong: "Hỏng hóc" };
+
+/**
+ * Ngày trả thực tế + Biên bản kiểm tra khi trả. Khi mọi thiết bị đã có biên bản thì
+ * thu gọn thành ghi chú (thiết bị đã về kho, server nhả lịch ngay lúc ghi biên bản);
+ * chỉ chủ thấy nút "Sửa biên bản" để mở lại — server cũng chặn người khác sửa.
+ */
+function TraThietBiSection({ don, laChu }: { don: DonThueDetail; laChu: boolean }) {
+  const [moLai, setMoLai] = useState(false);
+  const daKiem = new Map(don.kiem_tra_tinh_trang.map((k) => [k.thiet_bi_id, k.tinh_trang]));
+  const daDu = don.don_thue_chi_tiet.length > 0 && don.don_thue_chi_tiet.every((l) => daKiem.has(l.thiet_bi_id));
+
+  if (daDu && !moLai) {
+    const dem = new Map<TinhTrangThietBi, number>();
+    for (const t of daKiem.values()) dem.set(t, (dem.get(t) ?? 0) + 1);
+    const tomTat =
+      dem.size === 1 && dem.has("tot")
+        ? "tất cả Tốt"
+        : [...dem.entries()].map(([t, n]) => `${n} ${TINH_TRANG_LABEL[t]}`).join(", ");
+    return (
+      <div className="md:col-span-2">
+        <KhoiThaoTac title="Trả thiết bị & biên bản kiểm tra">
+          <GhiChuHoanThanh moLaiLabel={laChu ? "✏️ Sửa biên bản / ngày trả (chủ)" : undefined} onMoLai={() => setMoLai(true)}>
+            Đã kiểm tra đủ {don.don_thue_chi_tiet.length} thiết bị — {tomTat}. Thiết bị đã về kho.
+          </GhiChuHoanThanh>
+        </KhoiThaoTac>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {moLai && (
+        <div className="flex items-center justify-between md:col-span-2">
+          <span className="text-xs font-semibold text-[var(--text-muted)]">Đang sửa biên bản (chủ)</span>
+          <button type="button" className="btn-secondary !py-1" onClick={() => setMoLai(false)}>
+            Đóng
+          </button>
+        </div>
+      )}
+      <NgayTraThucTeForm
+        donId={don.id}
+        ngayBatDau={don.ngay_bat_dau}
+        ngayTraDuKien={don.ngay_tra_du_kien}
+        chiTiet={don.don_thue_chi_tiet}
+      />
+      <KiemTraForm donId={don.id} chiTiet={don.don_thue_chi_tiet} daKiem={daKiem} />
+    </>
+  );
+}
+
 function NgayTraThucTeForm({
   donId,
   ngayBatDau,
@@ -468,12 +525,12 @@ function NgayTraThucTeForm({
   function apDungTatCa() {
     setLoi("");
     startTatCa(async () => {
-      try {
-        await apDungNgayTraThucTeChoTatCa(donId, ngayApDungTatCa);
-        router.refresh();
-      } catch (err) {
-        setLoi((err as Error).message);
+      const res = await apDungNgayTraThucTeChoTatCa(donId, ngayApDungTatCa);
+      if (res.error) {
+        setLoi(res.error);
+        return;
       }
+      router.refresh();
     });
   }
 
@@ -524,12 +581,12 @@ function NgayTraThucTeDong({
     if (!ngay) return;
     setLoi("");
     start(async () => {
-      try {
-        await capNhatNgayTraThucTeDong(donId, line.thiet_bi_id, ngay);
-        router.refresh();
-      } catch (err) {
-        setLoi((err as Error).message);
+      const res = await capNhatNgayTraThucTeDong(donId, line.thiet_bi_id, ngay);
+      if (res.error) {
+        setLoi(res.error);
+        return;
       }
+      router.refresh();
     });
   }
 
@@ -547,34 +604,65 @@ function NgayTraThucTeDong({
   );
 }
 
-function KiemTraForm({ donId, chiTiet }: { donId: string; chiTiet: DonChiTiet[] }) {
+function KiemTraForm({
+  donId,
+  chiTiet,
+  daKiem,
+}: {
+  donId: string;
+  chiTiet: DonChiTiet[];
+  daKiem: Map<string, TinhTrangThietBi>;
+}) {
   const router = useRouter();
-  const [thietBiId, setThietBiId] = useState(chiTiet[0]?.thiet_bi_id ?? "");
+  const chuaKiemDauTien = chiTiet.find((l) => !daKiem.has(l.thiet_bi_id))?.thiet_bi_id;
+  const [thietBiId, setThietBiId] = useState(chuaKiemDauTien ?? chiTiet[0]?.thiet_bi_id ?? "");
   const [tinhTrang, setTinhTrang] = useState<TinhTrangThietBi>("tot");
   const [nguoiKiem, setNguoiKiem] = useState("");
   const [ghiChu, setGhiChu] = useState("");
+  const [loi, setLoi] = useState("");
   const [pending, start] = useTransition();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!thietBiId) return;
+    setLoi("");
     start(async () => {
-      await ghiKiemTraTinhTrang(donId, { thiet_bi_id: thietBiId, tinh_trang: tinhTrang, nguoi_kiem: nguoiKiem, ghi_chu: ghiChu });
+      const res = await ghiKiemTraTinhTrang(donId, {
+        thiet_bi_id: thietBiId,
+        tinh_trang: tinhTrang,
+        nguoi_kiem: nguoiKiem,
+        ghi_chu: ghiChu,
+      });
+      if (res.error) {
+        setLoi(res.error);
+        return;
+      }
       setGhiChu("");
+      // Tự chuyển sang thiết bị kế tiếp chưa kiểm tra cho đỡ phải chọn lại.
+      const keTiep = chiTiet.find((l) => l.thiet_bi_id !== thietBiId && !daKiem.has(l.thiet_bi_id));
+      if (keTiep) setThietBiId(keTiep.thiet_bi_id);
       router.refresh();
     });
   }
 
   return (
     <form onSubmit={submit} className="space-y-2 rounded-lg border border-[var(--border-color)] bg-[#f8fafc] p-3.5 md:col-span-2">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Biên bản kiểm tra thiết bị khi trả</h3>
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+        Biên bản kiểm tra thiết bị khi trả ({daKiem.size}/{chiTiet.length} đã kiểm tra)
+      </h3>
+      {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
       <div className="grid grid-cols-3 gap-2">
         <select className="input" value={thietBiId} onChange={(e) => setThietBiId(e.target.value)}>
-          {chiTiet.map((l) => (
-            <option key={l.thiet_bi_id} value={l.thiet_bi_id}>
-              {l.thiet_bi?.ten}
-            </option>
-          ))}
+          {chiTiet.map((l) => {
+            const kq = daKiem.get(l.thiet_bi_id);
+            return (
+              <option key={l.thiet_bi_id} value={l.thiet_bi_id}>
+                {kq ? "✓ " : ""}
+                {l.thiet_bi?.ten}
+                {kq ? ` (${TINH_TRANG_LABEL[kq]})` : ""}
+              </option>
+            );
+          })}
         </select>
         <select className="input" value={tinhTrang} onChange={(e) => setTinhTrang(e.target.value as TinhTrangThietBi)}>
           <option value="tot">Tốt</option>
@@ -584,6 +672,9 @@ function KiemTraForm({ donId, chiTiet }: { donId: string; chiTiet: DonChiTiet[] 
         <input className="input" placeholder="Người kiểm" value={nguoiKiem} onChange={(e) => setNguoiKiem(e.target.value)} />
       </div>
       <input className="input" placeholder="Ghi chú" value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+      <p className="text-xs text-[var(--text-muted)]">
+        Lưu xong thiết bị về kho ngay: Tốt/Trầy xước → Sẵn sàng, Hỏng hóc → Hỏng.
+      </p>
       <button disabled={pending} className="btn-primary w-full">
         {pending ? "Đang lưu..." : "Lưu kiểm tra"}
       </button>

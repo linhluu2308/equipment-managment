@@ -14,7 +14,7 @@ export const CHANG_LABEL: Record<ChangDon, string> = {
   yeu_cau: "Yêu cầu",
   bao_gia: "Báo giá",
   da_giao: "Đã giao",
-  cho_tra: "Chờ trả",
+  cho_tra: "Chờ thanh toán",
   xong: "Xong",
   huy: "Đã huỷ",
 };

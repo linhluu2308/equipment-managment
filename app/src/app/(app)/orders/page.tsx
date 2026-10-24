@@ -14,7 +14,7 @@ const TABS: { value: ChangDon | "tat_ca"; label: string }[] = [
   { value: "yeu_cau", label: "Yêu cầu" },
   { value: "bao_gia", label: "Báo giá" },
   { value: "da_giao", label: "Đã giao" },
-  { value: "cho_tra", label: "Chờ trả" },
+  { value: "cho_tra", label: "Chờ thanh toán" },
   { value: "xong", label: "Xong" },
   { value: "huy", label: "Đã huỷ" },
 ];

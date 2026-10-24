@@ -15,12 +15,14 @@ export async function layTongQuan() {
 
   const dsDonMo = donMo ?? [];
 
-  // "Đang diễn ra" = thiết bị thực sự đang ở ngoài (đã giao/chờ trả) VÀ hôm nay nằm
-  // trong dải ngày thuê. "Sắp tới" = yêu cầu/báo giá chưa tới ngày bắt đầu (chưa giao).
-  // "Quá hạn" = đã giao/chờ trả nhưng đã qua ngày trả dự kiến mà chưa ai chốt về kho.
+  // "Đang diễn ra" = thiết bị thực sự đang ở ngoài (Đã giao) VÀ hôm nay nằm trong dải
+  // ngày thuê. "Sắp tới" = yêu cầu/báo giá chưa tới ngày bắt đầu (chưa giao).
+  // "Quá hạn" = Đã giao nhưng đã qua ngày trả dự kiến mà chưa nhận về kho. Chặng
+  // "cho_tra" (hiển thị "Chờ thanh toán") là thiết bị đã về kho, chỉ còn chờ thu tiền
+  // nên không tính vào 2 nhóm này.
   const donDangChay = dsDonMo.filter(
     (d) =>
-      (d.chang === "da_giao" || d.chang === "cho_tra") &&
+      d.chang === "da_giao" &&
       d.ngay_bat_dau <= homNay &&
       homNay <= d.ngay_tra_du_kien
   );
@@ -28,7 +30,7 @@ export async function layTongQuan() {
     (d) => (d.chang === "yeu_cau" || d.chang === "bao_gia") && d.ngay_bat_dau >= homNay
   );
   const donQuaHan = dsDonMo
-    .filter((d) => (d.chang === "da_giao" || d.chang === "cho_tra") && d.ngay_tra_du_kien < homNay)
+    .filter((d) => d.chang === "da_giao" && d.ngay_tra_du_kien < homNay)
     .sort((a, b) => (a.ngay_tra_du_kien < b.ngay_tra_du_kien ? -1 : 1));
 
   const { data: thietBi, error: e3 } = await supabase.from("thiet_bi").select("danh_muc, trang_thai");

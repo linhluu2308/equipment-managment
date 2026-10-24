@@ -4,8 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/admin";
 import { ghiNhatKyThayDoiDon, nguoiDungHienTaiLaChu } from "@/lib/quyenVaNhatKy";
-import { khoangNgayGiao, soNgayVonDong } from "@/lib/calculations";
-import type { ChangDon, CoSoTinhGiaVon, NhatKyThayDoiDon } from "@/lib/types";
+import { congNoConLai, khoangNgayGiao, soNgayVonDong } from "@/lib/calculations";
+import {
+  bienBanDaDu,
+  capNhatTrangThaiTheoBienBanCuaDon,
+  nhaThietBiChuaKiemTraCuaDon,
+} from "@/lib/trangThaiThietBi";
+import { CHANG_LABEL, type ChangDon, type CoSoTinhGiaVon, type DonThueDetail, type NhatKyThayDoiDon } from "@/lib/types";
 
 const CHANG_KHOA_CUNG: ChangDon[] = ["bao_gia", "da_giao", "cho_tra"];
 
@@ -26,19 +31,37 @@ export async function kiemTraTrungLich(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("don_thue_chi_tiet")
-    .select("don_thue_id, don_thue!inner(id, ma_don, chang, ngay_bat_dau, ngay_tra_du_kien)")
+    .select("don_thue_id, don_thue!inner(id, ma_don, chang, da_xoa, ngay_bat_dau, ngay_tra_du_kien)")
     .eq("thiet_bi_id", thietBiId);
   if (error) throw new Error(error.message);
 
+  // Thiết bị đã có biên bản kiểm tra khi trả ở đơn nào thì đã về kho — đơn đó không
+  // còn giữ thiết bị nữa (dù đơn chưa chốt "Xong" vì còn chờ thanh toán). Trigger
+  // chan_trung_lich_thiet_bi (migration 0016) áp đúng quy tắc này ở DB.
+  const { data: kiemTra, error: eKt } = await supabase
+    .from("kiem_tra_tinh_trang")
+    .select("don_thue_id")
+    .eq("thiet_bi_id", thietBiId);
+  if (eKt) throw new Error(eKt.message);
+  const donDaTraThietBi = new Set((kiemTra ?? []).map((k) => k.don_thue_id));
+
   type Row = {
     don_thue_id: string;
-    don_thue: { id: string; ma_don: string | null; chang: ChangDon; ngay_bat_dau: string; ngay_tra_du_kien: string };
+    don_thue: {
+      id: string;
+      ma_don: string | null;
+      chang: ChangDon;
+      da_xoa: boolean;
+      ngay_bat_dau: string;
+      ngay_tra_du_kien: string;
+    };
   };
 
   for (const row of (data ?? []) as unknown as Row[]) {
     const don = row.don_thue;
-    if (!don || don.id === excludeDonId) continue;
+    if (!don || don.id === excludeDonId || don.da_xoa) continue;
     if (don.chang === "xong" || don.chang === "huy") continue;
+    if (donDaTraThietBi.has(don.id)) continue;
     if (!khoangNgayGiao(ngayBatDau, ngayTraDuKien, don.ngay_bat_dau, don.ngay_tra_du_kien)) continue;
 
     if (CHANG_KHOA_CUNG.includes(don.chang)) {
@@ -309,8 +332,8 @@ export async function suaDonThue(
 
 /**
  * Xoá mềm đơn nhập sai — không xoá cứng vì đơn có thể đã phát sinh thanh toán/chi
- * phí cần giữ lại để đối chiếu. Nếu đơn đang ở chặng "Đã giao"/"Chờ trả" (thiết bị
- * thực sự đang ở ngoài), tự trả thiết bị liên quan về "Sẵn sàng". Nếu đơn đã ở chặng
+ * phí cần giữ lại để đối chiếu. Nếu đơn đang ở chặng "Đã giao"/"Chờ thanh toán", tự
+ * trả các thiết bị chưa kiểm tra trả (còn ở chỗ khách) về "Sẵn sàng". Nếu đơn đã ở chặng
  * "Xong" (đã phát sinh công nợ NCC), xoá luôn các dòng nợ "no_phat_sinh" gắn với
  * đơn này — tránh treo nợ sai trên sổ công nợ nhà cung cấp sau khi đơn bị xoá.
  */
@@ -335,7 +358,7 @@ export async function xoaDonThue(donId: string, lyDo: string): Promise<{ error?:
   if (error) return { error: error.message };
 
   if (don.chang === "da_giao" || don.chang === "cho_tra") {
-    await capNhatTrangThaiTheoThietBiTrongDon(donId, "san_sang");
+    await nhaThietBiChuaKiemTraCuaDon(donId);
   }
 
   let soDongNoDaXoa = 0;
@@ -437,51 +460,65 @@ export async function listDonThueDaXoa() {
 }
 
 /**
- * Ghi ngày trả thực tế cho MỘT thiết bị trong đơn — dùng khi chỉ vài thiết bị
- * trả sớm/trễ hơn báo giá, không phải cả đơn. Sửa được trong lúc đơn đang ở
- * chặng "Đã giao"/"Chờ trả" (trước khi chốt "Xong"), giống lúc ghi biên bản
- * kiểm tra tình trạng khi trả.
+ * Chặn sửa ngày trả thực tế khi không còn hợp lệ: chỉ sửa được ở chặng "Đã giao"/
+ * "Chờ thanh toán"; khi biên bản kiểm tra đã đủ mọi thiết bị thì chỉ chủ được sửa.
  */
-export async function capNhatNgayTraThucTeDong(donId: string, thietBiId: string, ngay: string) {
-  const supabase = await createClient();
+async function kiemTraDuocSuaNgayTra(donId: string, ngay: string): Promise<string | null> {
+  const supabase = createClient();
   const { data: don, error: eDon } = await supabase
     .from("don_thue")
-    .select("ngay_bat_dau")
+    .select("ngay_bat_dau, chang")
     .eq("id", donId)
     .single();
-  if (eDon) throw new Error(eDon.message);
-  if (ngay < don.ngay_bat_dau) {
-    throw new Error("Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.");
+  if (eDon) return eDon.message;
+  if (don.chang !== "da_giao" && don.chang !== "cho_tra") return "Đơn không còn ở chặng cho phép sửa ngày trả.";
+  if (ngay < don.ngay_bat_dau) return "Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.";
+  if (await bienBanDaDu(donId)) {
+    try {
+      await nguoiDungHienTaiLaChu();
+    } catch {
+      return "Biên bản đã kiểm tra đủ thiết bị — chỉ chủ mới được sửa ngày trả.";
+    }
   }
+  return null;
+}
 
-  const { error } = await supabase
+/**
+ * Ghi ngày trả thực tế cho MỘT thiết bị trong đơn — dùng khi chỉ vài thiết bị
+ * trả sớm/trễ hơn báo giá, không phải cả đơn. Sửa được trong lúc đơn đang ở
+ * chặng "Đã giao"/"Chờ thanh toán" (trước khi chốt "Xong"), giống lúc ghi biên bản
+ * kiểm tra tình trạng khi trả.
+ */
+export async function capNhatNgayTraThucTeDong(
+  donId: string,
+  thietBiId: string,
+  ngay: string
+): Promise<{ error?: string }> {
+  const loi = await kiemTraDuocSuaNgayTra(donId, ngay);
+  if (loi) return { error: loi };
+
+  const { error } = await createClient()
     .from("don_thue_chi_tiet")
     .update({ ngay_tra_thuc_te: ngay })
     .eq("don_thue_id", donId)
     .eq("thiet_bi_id", thietBiId);
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
   revalidatePath(`/orders/${donId}`);
+  return {};
 }
 
 /**
  * Áp dụng cùng 1 ngày trả thực tế cho TẤT CẢ thiết bị trong đơn — tiện cho
  * trường hợp cả đơn trả cùng lúc, đỡ phải nhập từng dòng.
  */
-export async function apDungNgayTraThucTeChoTatCa(donId: string, ngay: string) {
-  const supabase = await createClient();
-  const { data: don, error: eDon } = await supabase
-    .from("don_thue")
-    .select("ngay_bat_dau")
-    .eq("id", donId)
-    .single();
-  if (eDon) throw new Error(eDon.message);
-  if (ngay < don.ngay_bat_dau) {
-    throw new Error("Ngày trả thực tế không thể sớm hơn ngày bắt đầu thuê.");
-  }
+export async function apDungNgayTraThucTeChoTatCa(donId: string, ngay: string): Promise<{ error?: string }> {
+  const loi = await kiemTraDuocSuaNgayTra(donId, ngay);
+  if (loi) return { error: loi };
 
-  const { error } = await supabase.from("don_thue_chi_tiet").update({ ngay_tra_thuc_te: ngay }).eq("don_thue_id", donId);
-  if (error) throw new Error(error.message);
+  const { error } = await createClient().from("don_thue_chi_tiet").update({ ngay_tra_thuc_te: ngay }).eq("don_thue_id", donId);
+  if (error) return { error: error.message };
   revalidatePath(`/orders/${donId}`);
+  return {};
 }
 
 const CHUYEN_TIEP: Record<ChangDon, ChangDon[]> = {
@@ -493,30 +530,36 @@ const CHUYEN_TIEP: Record<ChangDon, ChangDon[]> = {
   huy: [],
 };
 
-export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
-  const supabase = await createClient();
+/**
+ * Lỗi nghiệp vụ trả về `{ error }` (production Next ẩn message của lỗi throw).
+ * Chốt "Xong" yêu cầu: đủ biên bản kiểm tra cho mọi thiết bị VÀ công nợ khách = 0
+ * (thu đủ, phần trả dư đã hoàn). Thiết bị được nhả theo biên bản kiểm tra (xem
+ * lib/trangThaiThietBi.ts), không còn đặt đồng loạt "Sẵn sàng" lúc chốt/huỷ.
+ */
+export async function chuyenChangDon(donId: string, changMoi: ChangDon): Promise<{ error?: string }> {
+  const supabase = createClient();
   const { data: don, error: eGet } = await supabase
     .from("don_thue")
     .select("chang, ngay_bat_dau, ngay_tra_du_kien")
     .eq("id", donId)
     .single();
-  if (eGet) throw new Error(eGet.message);
+  if (eGet) return { error: eGet.message };
 
   if (!CHUYEN_TIEP[don.chang as ChangDon].includes(changMoi)) {
-    throw new Error(`Không thể chuyển từ chặng "${don.chang}" sang "${changMoi}".`);
+    return { error: `Không thể chuyển từ chặng "${CHANG_LABEL[don.chang as ChangDon]}" sang "${CHANG_LABEL[changMoi]}".` };
   }
 
   if (changMoi === "xong") {
-    const chiTiet = await layChiTietDon(donId);
-    const { data: kiemTraList, error: eKt } = await supabase
-      .from("kiem_tra_tinh_trang")
-      .select("thiet_bi_id")
-      .eq("don_thue_id", donId);
-    if (eKt) throw new Error(eKt.message);
-    const daKiem = new Set((kiemTraList ?? []).map((k) => k.thiet_bi_id));
-    const thieu = chiTiet.filter((l) => !daKiem.has(l.thiet_bi_id));
-    if (thieu.length > 0) {
-      throw new Error("Chưa kiểm tra tình trạng đầy đủ cho tất cả thiết bị trong đơn.");
+    if (!(await bienBanDaDu(donId))) {
+      return { error: "Chưa kiểm tra tình trạng đầy đủ cho tất cả thiết bị trong đơn." };
+    }
+    const day = (await getDonThue(donId)) as unknown as DonThueDetail;
+    const congNo = Math.round(congNoConLai(day.don_thue_chi_tiet, day, day.chi_phi, day.thanh_toan));
+    if (congNo > 0) {
+      return { error: `Khách còn nợ ${congNo.toLocaleString("vi-VN")}đ — cần thu đủ trước khi hoàn tất đơn.` };
+    }
+    if (congNo < 0) {
+      return { error: `Khách đang trả dư ${(-congNo).toLocaleString("vi-VN")}đ — cần ghi nhận hoàn cọc trước khi hoàn tất đơn.` };
     }
   }
 
@@ -526,28 +569,28 @@ export async function chuyenChangDon(donId: string, changMoi: ChangDon) {
     .eq("id", donId)
     .eq("chang", don.chang) // chỉ ghi nếu chặng vẫn đúng như lúc vừa đọc ở trên
     .select("id");
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
   if (!updated || updated.length === 0) {
-    throw new Error(
-      "Đơn vừa bị người khác chuyển chặng trong lúc bạn thao tác. Tải lại trang và thử lại."
-    );
+    return { error: "Đơn vừa bị người khác chuyển chặng trong lúc bạn thao tác. Tải lại trang và thử lại." };
   }
 
-  if (changMoi === "da_giao") {
-    await capNhatTrangThaiTheoThietBiTrongDon(donId, "dang_thue");
+  try {
+    if (changMoi === "da_giao") await capNhatTrangThaiTheoThietBiTrongDon(donId, "dang_thue");
+    if (changMoi === "huy") await nhaThietBiChuaKiemTraCuaDon(donId);
+    if (changMoi === "xong") {
+      await capNhatTrangThaiTheoBienBanCuaDon(donId);
+      await phatSinhCongNoNccChoDon(donId);
+    }
+  } catch (err) {
+    return { error: (err as Error).message };
+  } finally {
+    revalidatePath(`/orders/${donId}`);
+    revalidatePath("/orders");
+    revalidatePath("/");
+    revalidatePath("/equipment");
+    revalidatePath("/suppliers");
   }
-  if (changMoi === "xong" || changMoi === "huy") {
-    await capNhatTrangThaiTheoThietBiTrongDon(donId, "san_sang");
-  }
-  if (changMoi === "xong") {
-    await phatSinhCongNoNccChoDon(donId);
-  }
-
-  revalidatePath(`/orders/${donId}`);
-  revalidatePath("/orders");
-  revalidatePath("/");
-  revalidatePath("/equipment");
-  revalidatePath("/suppliers");
+  return {};
 }
 
 /**
@@ -606,7 +649,7 @@ async function phatSinhCongNoNccChoDon(donId: string) {
 
 async function capNhatTrangThaiTheoThietBiTrongDon(
   donId: string,
-  trangThai: "dang_thue" | "san_sang"
+  trangThai: "dang_thue"
 ) {
   const supabase = await createClient();
   const { data: lines, error: eLines } = await supabase
@@ -626,16 +669,6 @@ async function capNhatTrangThaiTheoThietBiTrongDon(
       );
     }
   }
-}
-
-async function layChiTietDon(donId: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("don_thue_chi_tiet")
-    .select("*")
-    .eq("don_thue_id", donId);
-  if (error) throw new Error(error.message);
-  return data;
 }
 
 export async function listDonThue(chang?: ChangDon) {
