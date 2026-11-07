@@ -24,6 +24,7 @@ export default function XuatBaoGiaButton({
   ngayKetThucSuDung,
   chiTiet,
   giamGiaDon,
+  chiPhi,
   chang,
 }: {
   maDon: string;
@@ -35,6 +36,7 @@ export default function XuatBaoGiaButton({
   ngayKetThucSuDung: string;
   chiTiet: DonChiTiet[];
   giamGiaDon: number;
+  chiPhi: { loai: string; mo_ta: string | null; thu_khach: number }[];
   chang: ChangDon;
 }) {
   const [dangXuat, setDangXuat] = useState(false);
@@ -80,6 +82,10 @@ export default function XuatBaoGiaButton({
           soNgay={soNgay}
           dong={dong}
           giamGiaDon={giamGiaDon}
+          // Chỉ phần tính cho khách mới lên báo giá; khoản CineB tự chịu không hiện.
+          chiPhi={chiPhi
+            .filter((c) => Number(c.thu_khach) > 0)
+            .map((c) => ({ moTa: c.mo_ta ? `${c.loai} · ${c.mo_ta}` : c.loai, soTien: Number(c.thu_khach) }))}
         />
       ).toBlob();
 

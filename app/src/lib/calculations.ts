@@ -131,17 +131,43 @@ export function tongTienThietBi(
 }
 
 /**
- * Tổng tiền khách phải trả = tiền thiết bị − giảm giá cả đơn + chi phí phát sinh.
+ * Tổng tiền khách phải trả = tiền thiết bị − giảm giá cả đơn + phần chi phí phát sinh
+ * tính cho khách (thu_khach). Phần CineB tự chịu (cineb_chi) không vào công nợ khách.
  * Giảm giá đơn không làm tiền thiết bị âm (vd sau khi trả sớm làm tiền thiết bị nhỏ lại).
  */
 export function tongTienDon(
   lines: (ChietKhauDong & NgayRiengDong)[],
   don: Pick<DonThue, "ngay_bat_dau_su_dung" | "ngay_ket_thuc_su_dung"> & Partial<Pick<DonThue, "giam_gia_don">>,
-  chiPhiList: Pick<ChiPhi, "so_tien">[] = []
+  chiPhiList: Pick<ChiPhi, "thu_khach">[] = []
 ): number {
   const tienThietBi = Math.max(0, tongTienThietBi(lines, don) - (don.giam_gia_don ?? 0));
-  const tongChiPhi = chiPhiList.reduce((sum, c) => sum + c.so_tien, 0);
-  return tienThietBi + tongChiPhi;
+  return tienThietBi + tongThuKhachPhatSinh(chiPhiList);
+}
+
+export function tongThuKhachPhatSinh(chiPhiList: Pick<ChiPhi, "thu_khach">[]): number {
+  return chiPhiList.reduce((sum, c) => sum + Number(c.thu_khach), 0);
+}
+
+export type AiChiuChiPhi = "khach" | "cineb" | "tuy_chinh";
+
+/** "khach": thu khách đúng bằng số CineB chi (chuyển thẳng cho khách); "cineb": khách không trả. */
+export function aiChiuChiPhi(c: Pick<ChiPhi, "thu_khach" | "cineb_chi">): AiChiuChiPhi {
+  if (Number(c.thu_khach) === 0) return "cineb";
+  if (Number(c.thu_khach) === Number(c.cineb_chi)) return "khach";
+  return "tuy_chinh";
+}
+
+/** Mô tả ngắn để hiển thị trong danh sách: "Khách chịu 200.000đ", "Thu khách 300.000đ · CineB chi 250.000đ"... */
+export function moTaChiPhi(c: Pick<ChiPhi, "thu_khach" | "cineb_chi">): string {
+  const vnd = (n: number) => `${Number(n).toLocaleString("vi-VN")}đ`;
+  switch (aiChiuChiPhi(c)) {
+    case "khach":
+      return `Khách chịu ${vnd(c.thu_khach)}`;
+    case "cineb":
+      return `CineB chịu ${vnd(c.cineb_chi)}`;
+    default:
+      return `Thu khách ${vnd(c.thu_khach)} · CineB chi ${vnd(c.cineb_chi)}`;
+  }
 }
 
 export function tongDaThu(thanhToanList: ThanhToan[]): number {

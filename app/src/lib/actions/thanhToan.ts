@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/admin";
 import { getDonThue } from "@/lib/actions/donThue";
 import { congNoConLai } from "@/lib/calculations";
-import { ghiNhatKyThayDoiDon, nguoiDungHienTaiLaChu } from "@/lib/quyenVaNhatKy";
+import { ghiNhatKyRoiThucHien, nguoiDungHienTaiLaChu } from "@/lib/quyenVaNhatKy";
 import type { DonThueDetail, LoaiThanhToan } from "@/lib/types";
 
 /**
@@ -64,39 +64,6 @@ async function layGiaoDich(id: string, donId: string) {
 }
 
 /**
- * Ghi nhật ký TRƯỚC khi đổi dữ liệu: nếu không ghi được (vd chưa chạy migration 0015)
- * thì dừng luôn, không để giao dịch bị sửa/xoá mà không có dấu vết. Đổi dữ liệu thất
- * bại thì xoá lại dòng nhật ký vừa ghi.
- */
-async function ghiNhatKyRoiThucHien(
-  donId: string,
-  nguoiSua: { ten: string; email: string },
-  hanhDong: "sua_thanh_toan" | "xoa_thanh_toan",
-  lyDo: string,
-  cu: Record<string, unknown>,
-  moi: Record<string, unknown> | null,
-  thucHien: () => PromiseLike<{ error: { message: string } | null }>
-): Promise<{ error?: string }> {
-  let nhatKyId: string;
-  try {
-    nhatKyId = await ghiNhatKyThayDoiDon(donId, nguoiSua, hanhDong, lyDo, cu, moi);
-  } catch (err) {
-    const msg = (err as Error).message;
-    return { error: msg.includes("hanh_dong_check") ? LOI_CHUA_CHAY_MIGRATION : msg };
-  }
-  const { error } = await thucHien();
-  if (error) {
-    await createClient().from("nhat_ky_thay_doi_don").delete().eq("id", nhatKyId);
-    return { error: error.message };
-  }
-  revalidatePath(`/orders/${donId}`);
-  revalidatePath("/orders");
-  revalidatePath("/customers");
-  revalidatePath("/reports");
-  return {};
-}
-
-/**
  * Chủ sửa một giao dịch đã ghi (nhập sai số tiền/loại/ngày). Không áp quy tắc khoá
  * công nợ như ghiThanhToan() vì đây là công cụ đính chính, chỉ ghi lại đúng các
  * trường thực sự đổi vào nhật ký đơn.
@@ -131,7 +98,7 @@ export async function suaThanhToan(
   }
   if (Object.keys(doi).length === 0) return { error: "Không có gì thay đổi." };
 
-  return ghiNhatKyRoiThucHien(donId, nguoiSua, "sua_thanh_toan", lyDo.trim(), cu, doi, () =>
+  return ghiNhatKyRoiThucHien(donId, nguoiSua, "sua_thanh_toan", lyDo.trim(), cu, doi, LOI_CHUA_CHAY_MIGRATION, () =>
     createClient().from("thanh_toan").update(doi).eq("id", id)
   );
 }
@@ -149,7 +116,7 @@ export async function xoaThanhToan(id: string, donId: string, lyDo: string): Pro
   const giaoDich = await layGiaoDich(id, donId);
   if (!giaoDich) return { error: "Không tìm thấy giao dịch này (có thể đã bị xoá)." };
 
-  return ghiNhatKyRoiThucHien(donId, nguoiSua, "xoa_thanh_toan", lyDo.trim(), giaoDich, null, () =>
+  return ghiNhatKyRoiThucHien(donId, nguoiSua, "xoa_thanh_toan", lyDo.trim(), giaoDich, null, LOI_CHUA_CHAY_MIGRATION, () =>
     createClient().from("thanh_toan").delete().eq("id", id)
   );
 }

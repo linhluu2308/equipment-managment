@@ -119,6 +119,11 @@ export interface DongThietBiBaoGia {
   thanhTien: number;
 }
 
+export interface ChiPhiBaoGia {
+  moTa: string;
+  soTien: number;
+}
+
 export interface BaoGiaProps {
   maDon: string;
   ngayLap: string;
@@ -132,6 +137,8 @@ export interface BaoGiaProps {
   dong: DongThietBiBaoGia[];
   /** Giảm giá chung cho cả đơn (đ), trừ trước khi tính VAT. */
   giamGiaDon: number;
+  /** Chi phí phát sinh tính cho khách (vận chuyển, phụ phí...), cộng vào trước khi tính VAT. */
+  chiPhi: ChiPhiBaoGia[];
 }
 
 export default function BaoGiaDocument({
@@ -146,12 +153,14 @@ export default function BaoGiaDocument({
   soNgay,
   dong,
   giamGiaDon,
+  chiPhi,
 }: BaoGiaProps) {
   const tienThietBi = dong.reduce((sum, d) => sum + d.thanhTien, 0);
   const giam = Math.min(giamGiaDon, tienThietBi);
-  const tienSauGiam = tienThietBi - giam;
-  const tienVat = (tienSauGiam * VAT_PHAN_TRAM) / 100;
-  const tongCong = tienSauGiam + tienVat;
+  const tongChiPhi = chiPhi.reduce((sum, c) => sum + c.soTien, 0);
+  const tienTruocVat = tienThietBi - giam + tongChiPhi;
+  const tienVat = (tienTruocVat * VAT_PHAN_TRAM) / 100;
+  const tongCong = tienTruocVat + tienVat;
 
   return (
     <Document title={`Bao gia ${maDon}`}>
@@ -215,6 +224,21 @@ export default function BaoGiaDocument({
           ))}
         </View>
 
+        {chiPhi.length > 0 && (
+          <View style={s.table}>
+            <View style={s.trHead}>
+              <Text style={[s.th, { flex: 1 }]}>Chi phí phát sinh</Text>
+              <Text style={[s.th, s.colThanhTien]}>Thành tiền</Text>
+            </View>
+            {chiPhi.map((c, i) => (
+              <View style={s.tr} key={i}>
+                <Text style={[s.td, { flex: 1 }]}>{c.moTa}</Text>
+                <Text style={[s.td, s.colThanhTien]}>{tienVnd(c.soTien)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={s.tongKhoi}>
           <View style={s.tongDong}>
             <Text style={s.tongNhan}>Tổng tiền thiết bị (chưa VAT)</Text>
@@ -224,6 +248,12 @@ export default function BaoGiaDocument({
             <View style={s.tongDong}>
               <Text style={s.tongNhan}>Giảm giá cả đơn</Text>
               <Text style={s.tongGiaTri}>−{tienVnd(giam)}</Text>
+            </View>
+          )}
+          {tongChiPhi > 0 && (
+            <View style={s.tongDong}>
+              <Text style={s.tongNhan}>Chi phí phát sinh</Text>
+              <Text style={s.tongGiaTri}>{tienVnd(tongChiPhi)}</Text>
             </View>
           )}
           <View style={s.tongDong}>

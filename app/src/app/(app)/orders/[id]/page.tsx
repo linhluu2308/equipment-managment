@@ -5,6 +5,7 @@ import { CHANG_LABEL, HANH_DONG_LABEL, LOAI_THANH_TOAN_LABEL, type DonThueDetail
 import {
   khoangSuDungDong,
   moTaChietKhau,
+  moTaChiPhi,
   soNgayThue,
   soNgaySuDungDong,
   soNgayThueSuDung,
@@ -12,12 +13,14 @@ import {
   tongTienDon,
   tongTienThietBi,
   tongDaThu,
+  tongThuKhachPhatSinh,
 } from "@/lib/calculations";
 import { formatNgay, formatNgayGio } from "@/lib/formatDate";
 import OrderActions from "@/components/orders/OrderActions";
 import DongThietBiActions, { ThemThietBiButton } from "@/components/orders/ThietBiTrongDonActions";
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
 import ThanhToanChuActions from "@/components/orders/ThanhToanChuActions";
+import ChiPhiChuActions from "@/components/orders/ChiPhiChuActions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +36,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const tong = tongTienDon(don.don_thue_chi_tiet, don, don.chi_phi);
   const tienThietBi = tongTienThietBi(don.don_thue_chi_tiet, don);
   const giamGiaDon = Number(don.giam_gia_don ?? 0);
-  const tongChiPhi = don.chi_phi.reduce((s, c) => s + c.so_tien, 0);
+  const tongChiPhi = tongThuKhachPhatSinh(don.chi_phi);
   const daThu = tongDaThu(don.thanh_toan);
   const congNo = tong - daThu;
   const soThietBiTraKhacNgay = don.don_thue_chi_tiet.filter(
@@ -66,6 +69,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               ngayKetThucSuDung={don.ngay_ket_thuc_su_dung}
               chiTiet={don.don_thue_chi_tiet}
               giamGiaDon={Number(don.giam_gia_don ?? 0)}
+              chiPhi={don.chi_phi}
               chang={don.chang}
             />
           </div>
@@ -171,7 +175,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 · <span className="font-semibold text-[#15803d]">Giảm giá cả đơn −{giamGiaDon.toLocaleString("vi-VN")}đ</span>
               </>
             )}
-            {tongChiPhi > 0 && ` · Chi phí phát sinh +${tongChiPhi.toLocaleString("vi-VN")}đ`}
+            {tongChiPhi > 0 && ` · Chi phí phát sinh tính khách +${tongChiPhi.toLocaleString("vi-VN")}đ`}
           </p>
         )}
 
@@ -220,11 +224,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </h3>
           <ul className="text-sm divide-y divide-[var(--border-color)]">
             {don.chi_phi.map((c) => (
-              <li key={c.id} className="flex justify-between py-1.5">
+              <li key={c.id} className="flex items-center justify-between gap-2 py-1.5">
                 <span>
                   {c.loai} {c.mo_ta && `· ${c.mo_ta}`}
                 </span>
-                <span className="font-semibold">{c.so_tien.toLocaleString("vi-VN")}đ</span>
+                <span className="flex items-center text-right">
+                  <span className="font-semibold">{moTaChiPhi(c)}</span>
+                  {!don.da_xoa && <ChiPhiChuActions donId={don.id} chiPhi={c} />}
+                </span>
               </li>
             ))}
             {don.chi_phi.length === 0 && <li className="py-1.5 text-[var(--text-muted)]">Không có chi phí phát sinh.</li>}
@@ -273,7 +280,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   <span>
                     <span
                       className={`badge ${
-                        nk.hanh_dong === "xoa" || nk.hanh_dong === "xoa_thanh_toan"
+                        nk.hanh_dong === "xoa" || nk.hanh_dong === "xoa_thanh_toan" || nk.hanh_dong === "xoa_chi_phi"
                           ? "badge-danger"
                           : nk.hanh_dong === "khoi_phuc"
                             ? "badge-success"
@@ -296,6 +303,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     Giao dịch đã xoá: {formatGiaTriThayDoi("loai", nk.du_lieu_cu.loai)} ·{" "}
                     {formatGiaTriThayDoi("so_tien", nk.du_lieu_cu.so_tien)} · {formatGiaTriThayDoi("ngay_thu", nk.du_lieu_cu.ngay_thu)}
                     {nk.du_lieu_cu.hinh_thuc ? ` · ${nk.du_lieu_cu.hinh_thuc}` : ""}
+                  </p>
+                ) : nk.hanh_dong === "xoa_chi_phi" && nk.du_lieu_cu ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Khoản đã xoá: {String(nk.du_lieu_cu.loai ?? "—")}
+                    {nk.du_lieu_cu.mo_ta ? ` · ${nk.du_lieu_cu.mo_ta}` : ""} · thu khách{" "}
+                    {formatGiaTriThayDoi("thu_khach", nk.du_lieu_cu.thu_khach)} · CineB chi{" "}
+                    {formatGiaTriThayDoi("cineb_chi", nk.du_lieu_cu.cineb_chi)}
                   </p>
                 ) : (
                   nk.du_lieu_moi &&
@@ -325,7 +339,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 function formatGiaTriThayDoi(key: string, v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
   if (key.startsWith("ngay_") && typeof v === "string") return formatNgay(v);
-  if ((key === "so_tien" || key === "giam_gia_don") && typeof v === "number") return `${v.toLocaleString("vi-VN")}đ`;
+  if (["so_tien", "giam_gia_don", "thu_khach", "cineb_chi"].includes(key) && typeof v === "number") return `${v.toLocaleString("vi-VN")}đ`;
   if (key === "loai" && typeof v === "string" && v in LOAI_THANH_TOAN_LABEL)
     return LOAI_THANH_TOAN_LABEL[v as keyof typeof LOAI_THANH_TOAN_LABEL];
   if (typeof v === "object") return JSON.stringify(v);
