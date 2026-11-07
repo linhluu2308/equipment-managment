@@ -6,8 +6,8 @@ import type { AiChiuChiPhi } from "@/lib/calculations";
 export type GiaTriChiPhi = { aiChiu: AiChiuChiPhi; soTien: string; thuKhach: string; cinebChi: string };
 
 const LUA_CHON: { value: AiChiuChiPhi; label: string }[] = [
-  { value: "khach", label: "Khách chịu" },
-  { value: "cineb", label: "CineB chịu" },
+  { value: "khach", label: "Khách chi" },
+  { value: "cineb", label: "CineB chi" },
   { value: "tuy_chinh", label: "Tuỳ chỉnh" },
 ];
 

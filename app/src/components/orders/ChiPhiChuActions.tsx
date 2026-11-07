@@ -108,7 +108,7 @@ function SuaChiPhiModal({ donId, chiPhi, onClose }: { donId: string; chiPhi: Chi
           <Truong label="Mô tả">
             <input className="input" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
           </Truong>
-          <Truong label="Ai chịu">
+          <Truong label="Ai chi">
             <ChiPhiSoTienInput value={soTien} onChange={setSoTien} />
           </Truong>
           <Truong label="Lý do (bắt buộc)">
