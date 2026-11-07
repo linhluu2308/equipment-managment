@@ -25,6 +25,9 @@ export async function layBaoCaoThietBi(
   dong: DongBaoCaoThietBi[];
   tongDoanhThu: number;
   tongGiaVon: number;
+  /** Phần chi phí phát sinh tính cho khách — đã gồm trong tongDoanhThu. */
+  tongThuPhatSinh: number;
+  /** Phần chi phí phát sinh CineB thực chi — trừ vào tongLoiNhuan. */
   tongChiPhi: number;
   tongLoiNhuan: number;
   soDonHoanTat: number;
@@ -59,7 +62,7 @@ export async function layBaoCaoThietBi(
 
   const { data: chiPhiList, error: e3 } = await supabase
     .from("chi_phi")
-    .select("so_tien, don_thue!inner(chang, da_xoa, ngay_bat_dau)");
+    .select("thu_khach, cineb_chi, don_thue!inner(chang, da_xoa, ngay_bat_dau)");
   if (e3) throw new Error(e3.message);
 
   type Row = {
@@ -91,15 +94,19 @@ export async function layBaoCaoThietBi(
       : tatCaRows;
   const donHoanTatIds = new Set<string>();
 
-  type ChiPhiRow = { so_tien: number; don_thue: { chang: string; da_xoa: boolean; ngay_bat_dau: string } };
-  const tatCaChiPhi = ((chiPhiList ?? []) as unknown as ChiPhiRow[]).filter((c) => !c.don_thue.da_xoa);
-  const tongChiPhi = tatCaChiPhi
-    .filter(
-      (c) =>
-        c.don_thue.chang === "xong" &&
-        (!tuNgay || !denNgay || (c.don_thue.ngay_bat_dau >= tuNgay && c.don_thue.ngay_bat_dau <= denNgay))
-    )
-    .reduce((sum, c) => sum + c.so_tien, 0);
+  type ChiPhiRow = {
+    thu_khach: number;
+    cineb_chi: number;
+    don_thue: { chang: string; da_xoa: boolean; ngay_bat_dau: string };
+  };
+  const chiPhiDonXong = ((chiPhiList ?? []) as unknown as ChiPhiRow[]).filter(
+    (c) =>
+      !c.don_thue.da_xoa &&
+      c.don_thue.chang === "xong" &&
+      (!tuNgay || !denNgay || (c.don_thue.ngay_bat_dau >= tuNgay && c.don_thue.ngay_bat_dau <= denNgay))
+  );
+  const tongThuPhatSinh = chiPhiDonXong.reduce((sum, c) => sum + Number(c.thu_khach), 0);
+  const tongChiPhi = chiPhiDonXong.reduce((sum, c) => sum + Number(c.cineb_chi), 0);
 
   const dong: DongBaoCaoThietBi[] = (thietBiList ?? []).map((tb) => {
     const cuaThietBi = rows.filter((r) => r.thiet_bi_id === tb.id && r.don_thue.chang !== "huy");
@@ -133,15 +140,17 @@ export async function layBaoCaoThietBi(
 
   dong.sort((a, b) => b.loiNhuan - a.loiNhuan);
 
-  const tongDoanhThu = dong.reduce((s, d) => s + d.doanhThu, 0) - tongGiamGiaDon;
+  // Phần chi phí phát sinh thu của khách là doanh thu của đơn (không gắn thiết bị nào).
+  const tongDoanhThu = dong.reduce((s, d) => s + d.doanhThu, 0) - tongGiamGiaDon + tongThuPhatSinh;
   const tongGiaVon = dong.reduce((s, d) => s + d.giaVon, 0);
 
   return {
     dong,
     tongDoanhThu,
     tongGiaVon,
+    tongThuPhatSinh,
     tongChiPhi,
-    // Lợi nhuận ròng trừ thêm chi phí phát sinh theo đơn (vận chuyển, bồi thường...) —
+    // Lợi nhuận ròng trừ phần CineB thực chi cho chi phí phát sinh (vận chuyển, sửa chữa...) —
     // khoản này không gắn với riêng thiết bị nào nên không trừ vào loiNhuan từng dòng.
     tongLoiNhuan: tongDoanhThu - tongGiaVon - tongChiPhi,
     soDonHoanTat: donHoanTatIds.size,

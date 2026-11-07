@@ -1,6 +1,7 @@
 // Helper chỉ chạy phía server, dùng chung cho các Server Action sửa/xoá đơn và giao dịch.
 // CỐ Ý không đặt "use server" ở file này: mọi export của file "use server" đều thành
 // endpoint client gọi được, mà 2 hàm dưới không được phép gọi trực tiếp từ client.
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { layThanhVienTheoEmail } from "@/lib/queries/thanhVien";
@@ -59,4 +60,38 @@ export async function ghiNhatKyThayDoiDon(
     .single();
   if (error) throw new Error(error.message);
   return data.id;
+}
+
+/**
+ * Ghi nhật ký TRƯỚC khi đổi dữ liệu: nếu không ghi được (vd chưa chạy migration mở
+ * rộng CHECK hanh_dong) thì dừng luôn, không để giao dịch bị sửa/xoá mà không có dấu vết. Đổi dữ liệu thất
+ * bại thì xoá lại dòng nhật ký vừa ghi.
+ */
+export async function ghiNhatKyRoiThucHien(
+  donId: string,
+  nguoiSua: { ten: string; email: string },
+  hanhDong: HanhDongThayDoiDon,
+  lyDo: string,
+  cu: Record<string, unknown>,
+  moi: Record<string, unknown> | null,
+  loiChuaChayMigration: string,
+  thucHien: () => PromiseLike<{ error: { message: string } | null }>
+): Promise<{ error?: string }> {
+  let nhatKyId: string;
+  try {
+    nhatKyId = await ghiNhatKyThayDoiDon(donId, nguoiSua, hanhDong, lyDo, cu, moi);
+  } catch (err) {
+    const msg = (err as Error).message;
+    return { error: msg.includes("hanh_dong_check") ? loiChuaChayMigration : msg };
+  }
+  const { error } = await thucHien();
+  if (error) {
+    await createClient().from("nhat_ky_thay_doi_don").delete().eq("id", nhatKyId);
+    return { error: error.message };
+  }
+  revalidatePath(`/orders/${donId}`);
+  revalidatePath("/orders");
+  revalidatePath("/customers");
+  revalidatePath("/reports");
+  return {};
 }

@@ -40,7 +40,8 @@ export default async function ReportsPage({
     preset = "tuy_chon";
   }
 
-  const { dong, tongDoanhThu, tongChiPhi, tongLoiNhuan, soDonHoanTat, tongGiamGiaDon } = await layBaoCaoThietBi(
+  const { dong, tongDoanhThu, tongThuPhatSinh, tongChiPhi, tongLoiNhuan, soDonHoanTat, tongGiamGiaDon } =
+    await layBaoCaoThietBi(
     tuNgay,
     denNgay
   );
@@ -79,9 +80,14 @@ export default async function ReportsPage({
               Đã trừ giảm giá cả đơn {tongGiamGiaDon.toLocaleString("vi-VN")}đ
             </div>
           )}
+          {tongThuPhatSinh > 0 && (
+            <div className="mt-1 text-xs text-[var(--text-muted)]">
+              Gồm thu khách phát sinh {tongThuPhatSinh.toLocaleString("vi-VN")}đ
+            </div>
+          )}
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">Chi phí phát sinh</div>
+          <div className="kpi-label">Chi phí phát sinh (CineB chi)</div>
           <div className="kpi-value" style={{ color: tongChiPhi > 0 ? "#dc2626" : undefined }}>
             {(tongChiPhi / 1000).toLocaleString("vi-VN")}k
           </div>
@@ -121,9 +127,10 @@ export default async function ReportsPage({
         <p className="text-xs text-[var(--text-muted)] mb-3">
           Lọc theo ngày bắt đầu thuê nằm trong khoảng đã chọn ở trên. Doanh thu/lợi nhuận chỉ tính trên đơn đã ở chặng
           &quot;Xong&quot;. Tần suất &amp; số ngày thuê tính trên mọi đơn chưa huỷ (kể cả đang chạy), phản ánh mức độ
-          được chọn thuê thực tế. Cột &quot;Lợi nhuận&quot; theo từng thiết bị là doanh thu trừ giá vốn, chưa trừ chi
-          phí phát sinh (vận chuyển, bồi thường...) vì khoản này ghi theo đơn chứ không theo riêng thiết bị nào — chi
-          phí đó chỉ được trừ vào &quot;Tổng lợi nhuận ròng&quot; ở KPI phía trên.
+          được chọn thuê thực tế. Cột &quot;Lợi nhuận&quot; theo từng thiết bị là doanh thu trừ giá vốn, chưa tính chi
+          phí phát sinh (vận chuyển, bồi thường...) vì khoản này ghi theo đơn chứ không theo riêng thiết bị nào — phần
+          thu khách được cộng vào &quot;Tổng doanh thu&quot;, phần CineB chi được trừ vào &quot;Tổng lợi nhuận
+          ròng&quot; ở KPI phía trên.
         </p>
         <div className="table-container" style={{ border: "none", boxShadow: "none" }}>
           <table>

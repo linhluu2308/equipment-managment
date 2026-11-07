@@ -6,12 +6,13 @@ import { useVai } from "@/lib/auth-context";
 import { chuyenChangDon, xoaDonThue, khoiPhucDonThue } from "@/lib/actions/donThue";
 import { ghiThanhToan } from "@/lib/actions/thanhToan";
 import { ghiChiPhi } from "@/lib/actions/chiPhi";
+import ChiPhiSoTienInput, { daNhapSoTien, soTienChiPhi, type GiaTriChiPhi } from "./ChiPhiSoTienInput";
 import { themCocGiayTo, hoanTraGiayTo } from "@/lib/actions/cocGiayTo";
 import { ghiKiemTraTinhTrang } from "@/lib/actions/kiemTra";
 import { capNhatNgayTraThucTeDong, apDungNgayTraThucTeChoTatCa } from "@/lib/actions/donThue";
-import { LOAI_THANH_TOAN_LABEL, type ChangDon, type DonThueDetail, type LoaiThanhToan, type TinhTrangThietBi } from "@/lib/types";
+import { LOAI_CHI_PHI, LOAI_THANH_TOAN_LABEL, type ChangDon, type DonThueDetail, type LoaiThanhToan, type TinhTrangThietBi } from "@/lib/types";
 import { formatNgay } from "@/lib/formatDate";
-import { congNoConLai } from "@/lib/calculations";
+import { congNoConLai, tongThuKhachPhatSinh } from "@/lib/calculations";
 import MoneyInput from "@/components/MoneyInput";
 import EditOrderModal from "./EditOrderModal";
 import OrderLyDoModal from "./OrderLyDoModal";
@@ -303,22 +304,31 @@ function ThanhToanForm({ donId, congNo }: { donId: string; congNo: number }) {
 }
 
 /** Thu gọn mặc định: chỉ hiện tóm tắt các khoản đã ghi, bấm mới mở form thêm. */
-function ChiPhiForm({ donId, chiPhiList }: { donId: string; chiPhiList: { so_tien: number }[] }) {
+const CHI_PHI_TRONG: GiaTriChiPhi = { aiChiu: "khach", soTien: "", thuKhach: "", cinebChi: "" };
+
+function ChiPhiForm({ donId, chiPhiList }: { donId: string; chiPhiList: { thu_khach: number; cineb_chi: number }[] }) {
   const router = useRouter();
   const [mo, setMo] = useState(false);
   const [loai, setLoai] = useState("Vận chuyển");
   const [moTa, setMoTa] = useState("");
-  const [soTien, setSoTien] = useState("");
+  const [soTien, setSoTien] = useState<GiaTriChiPhi>(CHI_PHI_TRONG);
+  const [loi, setLoi] = useState("");
   const [pending, start] = useTransition();
 
-  const tongChiPhi = chiPhiList.reduce((s, c) => s + c.so_tien, 0);
+  const tongThuKhach = tongThuKhachPhatSinh(chiPhiList);
+  const tongCinebChi = chiPhiList.reduce((s, c) => s + Number(c.cineb_chi), 0);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!soTien) return;
+    if (!daNhapSoTien(soTien)) return;
+    setLoi("");
     start(async () => {
-      await ghiChiPhi(donId, { loai, mo_ta: moTa, so_tien: Number(soTien) });
-      setSoTien("");
+      const res = await ghiChiPhi(donId, { loai, mo_ta: moTa, ...soTienChiPhi(soTien) });
+      if (res.error) {
+        setLoi(res.error);
+        return;
+      }
+      setSoTien(CHI_PHI_TRONG);
       setMoTa("");
       setMo(false);
       router.refresh();
@@ -330,7 +340,7 @@ function ChiPhiForm({ donId, chiPhiList }: { donId: string; chiPhiList: { so_tie
       <KhoiThaoTac title="Chi phí phát sinh">
         <p className="text-sm text-[var(--text-muted)]">
           {chiPhiList.length > 0
-            ? `Đã ghi ${chiPhiList.length} khoản · ${tongChiPhi.toLocaleString("vi-VN")}đ (xem ở mục Tài chính)`
+            ? `Đã ghi ${chiPhiList.length} khoản · thu khách ${tongThuKhach.toLocaleString("vi-VN")}đ · CineB chi ${tongCinebChi.toLocaleString("vi-VN")}đ (xem ở mục Tài chính)`
             : "Chưa có chi phí phát sinh."}
         </p>
         <button type="button" className="btn-secondary w-full" onClick={() => setMo(true)}>
@@ -344,17 +354,18 @@ function ChiPhiForm({ donId, chiPhiList }: { donId: string; chiPhiList: { so_tie
     <form onSubmit={submit}>
       <KhoiThaoTac title="Thêm chi phí phát sinh">
         <select className="input" value={loai} onChange={(e) => setLoai(e.target.value)}>
-          <option>Vận chuyển</option>
-          <option>Bồi thường hư hại</option>
-          <option>Phụ phí</option>
+          {LOAI_CHI_PHI.map((l) => (
+            <option key={l}>{l}</option>
+          ))}
         </select>
         <input className="input" placeholder="Mô tả" value={moTa} onChange={(e) => setMoTa(e.target.value)} />
-        <MoneyInput placeholder="Số tiền" value={soTien} onChange={setSoTien} />
+        <ChiPhiSoTienInput value={soTien} onChange={setSoTien} />
+        {loi && <p className="badge badge-danger !inline-block">{loi}</p>}
         <div className="flex gap-2">
           <button type="button" className="btn-secondary flex-1" onClick={() => setMo(false)}>
             Đóng
           </button>
-          <button disabled={pending} className="btn-primary flex-1">
+          <button disabled={pending || !daNhapSoTien(soTien)} className="btn-primary flex-1">
             {pending ? "Đang lưu..." : "Thêm chi phí"}
           </button>
         </div>

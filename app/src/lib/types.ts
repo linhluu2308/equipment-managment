@@ -128,7 +128,9 @@ export type HanhDongThayDoiDon =
   | "xoa_thanh_toan"
   | "them_thiet_bi"
   | "xoa_thiet_bi"
-  | "tra_som_thiet_bi";
+  | "tra_som_thiet_bi"
+  | "sua_chi_phi"
+  | "xoa_chi_phi";
 
 export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   sua: "Sửa đơn",
@@ -139,6 +141,8 @@ export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   them_thiet_bi: "Thêm thiết bị",
   xoa_thiet_bi: "Bỏ thiết bị khỏi đơn",
   tra_som_thiet_bi: "Trả sớm thiết bị",
+  sua_chi_phi: "Sửa chi phí phát sinh",
+  xoa_chi_phi: "Xoá chi phí phát sinh",
 };
 
 export const LOAI_THANH_TOAN_LABEL: Record<LoaiThanhToan, string> = {
@@ -197,12 +201,17 @@ export interface ThanhToan {
   created_at: string;
 }
 
+export const LOAI_CHI_PHI = ["Vận chuyển", "Bồi thường hư hại", "Phụ phí"] as const;
+
 export interface ChiPhi {
   id: string;
   don_thue_id: string;
   loai: string;
   mo_ta: string | null;
-  so_tien: number;
+  /** Phần tính cho khách: cộng vào công nợ và doanh thu. */
+  thu_khach: number;
+  /** Phần CineB thực chi (trả nhà xe, sửa chữa...): trừ vào lợi nhuận. */
+  cineb_chi: number;
   created_at: string;
 }
 
