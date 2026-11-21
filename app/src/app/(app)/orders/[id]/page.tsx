@@ -21,6 +21,8 @@ import DongThietBiActions, { ThemThietBiButton } from "@/components/orders/Thiet
 import XuatBaoGiaButton from "@/components/orders/XuatBaoGiaButton";
 import ThanhToanChuActions from "@/components/orders/ThanhToanChuActions";
 import ChiPhiChuActions from "@/components/orders/ChiPhiChuActions";
+import AnhThietBiSection from "@/components/orders/AnhThietBiSection";
+import { layAnhCuaDon } from "@/lib/queries/anhThietBi";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   if (!donRaw) notFound();
   const don = donRaw as unknown as DonThueDetail;
   const lichSuThayDoi = await getLichSuThayDoiDon(id);
+  const hienAnh = ["bao_gia", "da_giao", "cho_tra", "xong"].includes(don.chang);
+  const anhThietBi = hienAnh ? await layAnhCuaDon(id) : { anh: [] };
 
   const soNgayDuKien = soNgayThue(don.ngay_bat_dau, don.ngay_tra_du_kien);
   const soNgaySuDung = soNgayThueSuDung(don);
@@ -156,6 +160,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
       </section>
 
+      {hienAnh && (
+        <AnhThietBiSection
+          donId={don.id}
+          chang={don.chang}
+          daXoa={don.da_xoa}
+          dong={don.don_thue_chi_tiet.map((l) => ({
+            thiet_bi_id: l.thiet_bi_id,
+            ten: l.thiet_bi?.ten ?? "—",
+            ma: l.thiet_bi?.ma ?? null,
+          }))}
+          anh={anhThietBi.anh}
+          loi={anhThietBi.loi}
+        />
+      )}
+
       <section className="card space-y-4">
         <div className="flex items-center justify-between">
           <div className="card-title !mb-0">Tài chính</div>
@@ -280,7 +299,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   <span>
                     <span
                       className={`badge ${
-                        nk.hanh_dong === "xoa" || nk.hanh_dong === "xoa_thanh_toan" || nk.hanh_dong === "xoa_chi_phi"
+                        nk.hanh_dong === "xoa" ||
+                        nk.hanh_dong === "xoa_thanh_toan" ||
+                        nk.hanh_dong === "xoa_chi_phi" ||
+                        nk.hanh_dong === "xoa_anh_thiet_bi"
                           ? "badge-danger"
                           : nk.hanh_dong === "khoi_phuc"
                             ? "badge-success"
@@ -303,6 +325,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     Giao dịch đã xoá: {formatGiaTriThayDoi("loai", nk.du_lieu_cu.loai)} ·{" "}
                     {formatGiaTriThayDoi("so_tien", nk.du_lieu_cu.so_tien)} · {formatGiaTriThayDoi("ngay_thu", nk.du_lieu_cu.ngay_thu)}
                     {nk.du_lieu_cu.hinh_thuc ? ` · ${nk.du_lieu_cu.hinh_thuc}` : ""}
+                  </p>
+                ) : nk.hanh_dong === "xoa_anh_thiet_bi" && nk.du_lieu_cu ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Ảnh đã xoá: {String(nk.du_lieu_cu.loai ?? "—")} · {String(nk.du_lieu_cu.thiet_bi ?? "—")} · tải bởi{" "}
+                    {String(nk.du_lieu_cu.nguoi_tai ?? "—")} lúc {formatNgayGio(String(nk.du_lieu_cu.tai_luc ?? ""))} ·{" "}
+                    <span className="font-mono">{String(nk.du_lieu_cu.ten_file ?? "")}</span> (còn trong Thùng rác Google Drive 30 ngày)
                   </p>
                 ) : nk.hanh_dong === "xoa_chi_phi" && nk.du_lieu_cu ? (
                   <p className="mt-1 text-xs text-[var(--text-muted)]">

@@ -157,14 +157,14 @@ export function aiChiuChiPhi(c: Pick<ChiPhi, "thu_khach" | "cineb_chi">): AiChiu
   return "tuy_chinh";
 }
 
-/** Mô tả ngắn để hiển thị trong danh sách: "Khách chịu 200.000đ", "Thu khách 300.000đ · CineB chi 250.000đ"... */
+/** Mô tả ngắn để hiển thị trong danh sách: "Khách chi 200.000đ", "Thu khách 300.000đ · CineB chi 250.000đ"... */
 export function moTaChiPhi(c: Pick<ChiPhi, "thu_khach" | "cineb_chi">): string {
   const vnd = (n: number) => `${Number(n).toLocaleString("vi-VN")}đ`;
   switch (aiChiuChiPhi(c)) {
     case "khach":
-      return `Khách chịu ${vnd(c.thu_khach)}`;
+      return `Khách chi ${vnd(c.thu_khach)}`;
     case "cineb":
-      return `CineB chịu ${vnd(c.cineb_chi)}`;
+      return `CineB chi ${vnd(c.cineb_chi)}`;
     default:
       return `Thu khách ${vnd(c.thu_khach)} · CineB chi ${vnd(c.cineb_chi)}`;
   }
