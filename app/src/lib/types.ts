@@ -130,7 +130,8 @@ export type HanhDongThayDoiDon =
   | "xoa_thiet_bi"
   | "tra_som_thiet_bi"
   | "sua_chi_phi"
-  | "xoa_chi_phi";
+  | "xoa_chi_phi"
+  | "xoa_anh_thiet_bi";
 
 export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   sua: "Sửa đơn",
@@ -143,7 +144,27 @@ export const HANH_DONG_LABEL: Record<HanhDongThayDoiDon, string> = {
   tra_som_thiet_bi: "Trả sớm thiết bị",
   sua_chi_phi: "Sửa chi phí phát sinh",
   xoa_chi_phi: "Xoá chi phí phát sinh",
+  xoa_anh_thiet_bi: "Xoá ảnh thiết bị",
 };
+
+export type LoaiAnhThietBi = "xuat_kho" | "nhan_ve";
+
+export const LOAI_ANH_LABEL: Record<LoaiAnhThietBi, string> = {
+  xuat_kho: "Xuất kho",
+  nhan_ve: "Nhận về",
+};
+
+export interface AnhThietBiTrongDon {
+  id: string;
+  don_thue_id: string;
+  thiet_bi_id: string;
+  loai: LoaiAnhThietBi;
+  drive_file_id: string;
+  ten_file: string;
+  nguoi_tai: string;
+  nguoi_tai_email: string;
+  created_at: string;
+}
 
 export const LOAI_THANH_TOAN_LABEL: Record<LoaiThanhToan, string> = {
   coc: "Cọc tiền",

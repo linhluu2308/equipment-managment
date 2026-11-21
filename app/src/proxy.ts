@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const DUONG_DAN_CONG_KHAI = ["/login", "/auth/callback"];
+// /privacy: Google bắt buộc link chính sách bảo mật công khai để publish OAuth app.
+const DUONG_DAN_CONG_KHAI = ["/login", "/auth/callback", "/privacy"];
 
 // Next.js 16 đổi quy ước "middleware.ts" -> "proxy.ts" (hàm export cũng đổi tên
 // từ `middleware` sang `proxy`); dùng sai tên cũ khiến mọi trang trả về rỗng im lặng.
