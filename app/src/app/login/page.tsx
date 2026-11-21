@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -53,6 +54,10 @@ function LoginNoiDung() {
           <GoogleIcon />
           {dangXuLy ? "Đang chuyển hướng..." : "Đăng nhập bằng Google"}
         </button>
+
+        <Link href="/privacy" className="text-xs text-[var(--text-muted)] hover:underline">
+          Chính sách bảo mật
+        </Link>
       </div>
     </div>
   );
